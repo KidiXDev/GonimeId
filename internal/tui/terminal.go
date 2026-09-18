@@ -19,7 +19,7 @@ func BubbleTeaProgramOptions(extra ...tea.ProgramOption) []tea.ProgramOption {
 	return append(opts, extra...)
 }
 
-// NewProgram constructs a Bubble Tea program with GoAnime's terminal-safe
+// NewProgram constructs a Bubble Tea program with GonimeId's terminal-safe
 // defaults. Use this instead of tea.NewProgram for app-owned progress UIs.
 func NewProgram(model tea.Model, extra ...tea.ProgramOption) *tea.Program {
 	return tea.NewProgram(model, BubbleTeaProgramOptions(extra...)...)

@@ -8,35 +8,13 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
-	"github.com/alvarorichard/Goanime/internal/models"
-	"github.com/alvarorichard/Goanime/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/term"
 )
-
-func TestIsAnimeFireVideoAPIURL(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name string
-		url  string
-		want bool
-	}{
-		{"animefire.io", "https://animefire.io/video/abc", true},
-		{"animefire.plus", "https://animefire.plus/video/xyz", true},
-		{"upper case", "https://ANIMEFIRE.IO/VIDEO/x", true},
-		{"unrelated", "https://example.com/video/x", false},
-		{"empty", "", false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			assert.Equal(t, tt.want, isAnimeFireVideoAPIURL(tt.url))
-		})
-	}
-}
 
 func TestExtractRefererFromURL(t *testing.T) {
 	t.Parallel()
@@ -73,93 +51,6 @@ func TestFileExists(t *testing.T) {
 		p := filepath.Join(dir, "x")
 		require.NoError(t, os.WriteFile(p, []byte("y"), 0o600))
 		assert.True(t, fileExists(p))
-	})
-}
-
-func TestIsSuperFlixTextHLS(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name string
-		url  string
-		want bool
-	}{
-		{"SuperFlix master txt", "https://cdn.test/cdn/hls/hash/master.txt", true},
-		{"case insensitive", "https://cdn.test/CDN/HLS/hash/MASTER.TXT?x=1", true},
-		{"ordinary m3u8", "https://cdn.test/cdn/hls/hash/master.m3u8", false},
-		// Any path ending in master.txt now counts. The live SuperFlix URL is
-		// /<token>/<contentid>/<expires>/master.txt, which no rule can tell
-		// apart from this one — and requiring the old "/cdn/hls/" prefix is
-		// exactly what sent every real download to the MP4 Range downloader.
-		{"master.txt outside /cdn/hls/ is still a playlist", "https://cdn.test/files/master.txt", true},
-		{"master.txt only as a suffix, not a substring", "https://cdn.test/files/master.txt.html", false},
-		{"fragment is not part of the path", "https://cdn.test/a/b/master.txt#t=10", true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			assert.Equal(t, tt.want, isSuperFlixTextHLS(tt.url))
-		})
-	}
-}
-
-func TestFFmpegHLSDownloadArgs_SuperFlixContract(t *testing.T) {
-	t.Parallel()
-	args := ffmpegHLSDownloadArgs(
-		"https://cdn.test/cdn/hls/hash/master.txt",
-		"/tmp/movie.part.mp4",
-		"https://player.test/",
-	)
-	joined := strings.Join(args, " ")
-	assert.Contains(t, joined, "-f hls")
-	assert.Contains(t, joined, "-extension_picky 0")
-	assert.Contains(t, joined, "-progress pipe:1")
-	assert.Contains(t, joined, "Referer: https://player.test/")
-	assert.Contains(t, joined, "-map 0:v:0")
-	assert.Contains(t, joined, "-map 0:a?")
-	assert.Equal(t, "/tmp/movie.part.mp4", args[len(args)-1])
-}
-
-func TestFFmpegProgressTime(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		line string
-		want time.Duration
-		ok   bool
-	}{
-		{"out_time_us=128500000", 2*time.Minute + 8500*time.Millisecond, true},
-		{"out_time_us=1000000", time.Second, true},
-		{"out_time_us=0", 0, true},
-		{"  out_time_us=2500000  ", 2500 * time.Millisecond, true},
-		{"total_size=1234", 0, false},
-		{"progress=continue", 0, false},
-		{"out_time_us=invalid", 0, false},
-		{"out_time_us=-5", 0, false},
-		{"", 0, false},
-	}
-	for _, tc := range tests {
-		got, ok := ffmpegProgressTime(tc.line)
-		assert.Equal(t, tc.ok, ok, "line %q", tc.line)
-		assert.Equal(t, tc.want, got, "line %q", tc.line)
-	}
-}
-
-func TestUpdateTimedDownloadProgress(t *testing.T) {
-	t.Parallel()
-
-	t.Run("single HLS uses media duration as total", func(t *testing.T) {
-		m := &model{}
-		updateTimedDownloadProgress(m, 25*time.Second, 100*time.Second)
-		assert.Equal(t, (100 * time.Second).Microseconds(), m.progressTotal())
-		assert.Equal(t, (25 * time.Second).Microseconds(), m.received)
-		assert.InDelta(t, 0.25, m.peakPct, 1e-9)
-	})
-
-	t.Run("batch preserves byte estimate", func(t *testing.T) {
-		m := &model{totalBytes: 800 * 1024 * 1024}
-		updateTimedDownloadProgress(m, 50*time.Second, 100*time.Second)
-		assert.Equal(t, int64(800*1024*1024), m.progressTotal())
-		assert.Equal(t, int64(400*1024*1024), m.received)
-		assert.InDelta(t, 0.5, m.peakPct, 1e-9)
 	})
 }
 
@@ -350,98 +241,6 @@ func TestFindEpisode(t *testing.T) {
 	assert.False(t, ok)
 }
 
-func TestResolveDownloadURL_NonAnimeFireReturnsAsIs(t *testing.T) {
-	t.Parallel()
-	got, err := resolveDownloadURL("https://cdn.example/video.mp4")
-	require.NoError(t, err)
-	assert.Equal(t, "https://cdn.example/video.mp4", got)
-}
-
-func TestResolveDownloadURL_AnimeFireSSRFBlocked(t *testing.T) {
-	t.Parallel()
-	// AnimeFire path triggers SafeGet which rejects loopback.
-	_, err := resolveDownloadURL("https://animefire.io/video/loopback")
-	require.Error(t, err)
-}
-
-func TestResolveAnimeFireFallbackDownloadURL_NonAnimeFireRejected(t *testing.T) {
-	t.Parallel()
-	_, err := resolveAnimeFireFallbackDownloadURL("https://other.example/x", "")
-	require.Error(t, err)
-}
-
-func TestSelectAnimeFireDownloadCandidates_FromData(t *testing.T) {
-	t.Parallel()
-	body := mustJSON(t, map[string]any{
-		"data": []map[string]any{
-			{"src": "https://cdn/720.mp4", "label": "720p"},
-			{"src": "https://cdn/480.mp4", "label": "480p"},
-		},
-	})
-	got, err := selectAnimeFireDownloadCandidates(body, "best")
-	require.NoError(t, err)
-	require.NotEmpty(t, got)
-	assert.Equal(t, "https://cdn/720.mp4", got[0])
-}
-
-func TestSelectAnimeFireDownloadCandidates_FromBloggerToken(t *testing.T) {
-	t.Parallel()
-	body := mustJSON(t, map[string]any{
-		"data":  []any{},
-		"token": "https://blogger.com/video/abc",
-	})
-	got, err := selectAnimeFireDownloadCandidates(body, "best")
-	require.NoError(t, err)
-	assert.Equal(t, []string{"https://blogger.com/video/abc"}, got)
-}
-
-func TestSelectAnimeFireDownloadCandidates_EmptyReturnsError(t *testing.T) {
-	t.Parallel()
-	body := mustJSON(t, map[string]any{"data": []any{}})
-	_, err := selectAnimeFireDownloadCandidates(body, "best")
-	require.Error(t, err)
-}
-
-func TestSelectAnimeFireDownloadSource_TopCandidate(t *testing.T) {
-	t.Parallel()
-	body := mustJSON(t, map[string]any{
-		"data": []map[string]any{
-			{"src": "https://cdn/720.mp4", "label": "720p"},
-		},
-	})
-	got, err := selectAnimeFireDownloadSource(body, "720p")
-	require.NoError(t, err)
-	assert.Equal(t, "https://cdn/720.mp4", got)
-}
-
-func TestOrderAnimeFireSources_DescendingForBest(t *testing.T) {
-	t.Parallel()
-	data := []VideoData{
-		{Src: "low", Label: "480p"},
-		{Src: "high", Label: "1080p"},
-		{Src: "mid", Label: "720p"},
-	}
-	got := orderAnimeFireSources(data, "best")
-	require.NotEmpty(t, got)
-	assert.Equal(t, "high", got[0])
-}
-
-func TestOrderAnimeFireSources_AscendingForWorst(t *testing.T) {
-	t.Parallel()
-	data := []VideoData{
-		{Src: "high", Label: "1080p"},
-		{Src: "low", Label: "480p"},
-	}
-	got := orderAnimeFireSources(data, "worst")
-	require.NotEmpty(t, got)
-	assert.Equal(t, "low", got[0])
-}
-
-func TestOrderAnimeFireSources_EmptyReturnsNil(t *testing.T) {
-	t.Parallel()
-	assert.Nil(t, orderAnimeFireSources(nil, "best"))
-}
-
 func TestRecordBatchDownloadFailure_NilErrorNoop(t *testing.T) {
 	t.Parallel()
 	var mu sync.Mutex
@@ -504,58 +303,6 @@ func TestBatchDownloadError_Error_TruncatesAfterFive(t *testing.T) {
 	got := batchDownloadError{Failures: failures}.Error()
 	assert.Contains(t, got, "7 episodes failed")
 	assert.Contains(t, got, "2 more")
-}
-
-func TestIsHTTPStatusError_MatchesStatus(t *testing.T) {
-	t.Parallel()
-	assert.False(t, isHTTPStatusError(nil, 404))
-	assert.True(t, isHTTPStatusError(errors.New("got HTTP 404 from CDN"), 404))
-	assert.False(t, isHTTPStatusError(errors.New("got HTTP 500 from CDN"), 404))
-}
-
-func TestRunAnimeFireDirectDownloadWithFallback_NoErrorReturnsEarly(t *testing.T) {
-	t.Parallel()
-	called := 0
-	download := func(_, _ string, _ *model) error { called++; return nil }
-	fallback := func(_, _ string) (string, error) { t.Fatal("fallback must not run"); return "", nil }
-	err := runAnimeFireDirectDownloadWithFallback("https://animefire.io/video/x", "https://cdn/y.mp4", "/tmp/x", &model{}, download, fallback)
-	require.NoError(t, err)
-	assert.Equal(t, 1, called)
-}
-
-func TestRunAnimeFireDirectDownloadWithFallback_404FallsBack(t *testing.T) {
-	t.Parallel()
-	attempt := 0
-	download := func(url, _ string, _ *model) error {
-		attempt++
-		if attempt == 1 {
-			return errors.New("HTTP 404 not found")
-		}
-		assert.Equal(t, "https://cdn/fallback.mp4", url)
-		return nil
-	}
-	fallback := func(_, _ string) (string, error) { return "https://cdn/fallback.mp4", nil }
-	err := runAnimeFireDirectDownloadWithFallback("https://animefire.io/video/x", "https://cdn/orig.mp4", "/tmp/x", &model{}, download, fallback)
-	require.NoError(t, err)
-	assert.Equal(t, 2, attempt)
-}
-
-func TestRunAnimeFireDirectDownloadWithFallback_NonAnimeFire404ReturnsOriginal(t *testing.T) {
-	t.Parallel()
-	download := func(_, _ string, _ *model) error { return errors.New("HTTP 404 not found") }
-	fallback := func(_, _ string) (string, error) { t.Fatal("fallback must not run for non-animefire"); return "", nil }
-	err := runAnimeFireDirectDownloadWithFallback("https://other/x", "https://cdn/orig.mp4", "/tmp/x", &model{}, download, fallback)
-	require.Error(t, err)
-}
-
-func TestDownloadAnimeFireDirectWithFallback_SetsGlobalReferer(t *testing.T) {
-	t.Cleanup(util.ClearGlobalReferer)
-	util.ClearGlobalReferer()
-
-	// Call with bogus URL so download errors instantly. Referer setup is
-	// what we are pinning here, not the download outcome.
-	_ = downloadAnimeFireDirectWithFallback("https://animefire.io/video/x", "http://0.0.0.0:0/x.mp4", "/tmp/_unused.mp4", &model{})
-	assert.Equal(t, "https://animefire.io", util.GetGlobalReferer())
 }
 
 func TestDownloadBloggerDirect_SSRFBlocked(t *testing.T) {
@@ -662,7 +409,7 @@ func homePath(t *testing.T, name string) string {
 	t.Helper()
 	home, err := os.UserHomeDir()
 	require.NoError(t, err)
-	dir, err := os.MkdirTemp(home, "goanime_native_hls_test_*")
+	dir, err := os.MkdirTemp(home, "gonimeid_native_hls_test_*")
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = os.RemoveAll(dir) })
 	return filepath.Join(dir, name)

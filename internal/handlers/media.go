@@ -7,11 +7,11 @@ import (
 	"strings"
 
 	"charm.land/huh/v2"
-	"github.com/alvarorichard/Goanime/internal/api/providers"
-	"github.com/alvarorichard/Goanime/internal/api/source"
-	"github.com/alvarorichard/Goanime/internal/models"
-	"github.com/alvarorichard/Goanime/internal/tui"
-	"github.com/alvarorichard/Goanime/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/api/providers"
+	"github.com/KidiXDev/GonimeId/internal/api/source"
+	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/tui"
+	"github.com/KidiXDev/GonimeId/internal/util"
 	"github.com/ktr0731/go-fuzzyfinder"
 )
 
@@ -40,9 +40,8 @@ func (registryMediaSource) SearchAll(query string) ([]*models.Anime, error) {
 }
 
 func (registryMediaSource) SearchAnimeOnly(query string) ([]*models.Anime, error) {
-	// AniDB took AllAnime's place as the subbed/dubbed anime source when
-	// AllAnime was removed; AnimeFire stays as the PT-BR anime source.
-	return providers.SearchAll(context.Background(), query, source.AniDB, source.AnimeFire)
+	// Every registered source is an anime source.
+	return providers.SearchAll(context.Background(), query)
 }
 
 func (registryMediaSource) GetAnimeStreamURL(anime *models.Anime, episodeNum, quality, _ string) (streamURL string, metadata map[string]string, err error) {

@@ -1,10 +1,8 @@
 package source
 
 import (
-	"strings"
-
-	"github.com/alvarorichard/Goanime/internal/models"
-	"github.com/alvarorichard/Goanime/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/util"
 )
 
 // ResolvedSource is the immutable result of source resolution.
@@ -49,16 +47,6 @@ func Resolve(anime *models.Anime) (Source, ResolvedSource) {
 		d := s.Describe()
 		if reason, ok := d.matchNonExplicit(anime); ok {
 			return s, ResolvedSource{Kind: d.Kind, Reason: reason}
-		}
-	}
-
-	// PT-BR tag without specific source → default AnimeFire
-	if anime.Name != "" {
-		lower := strings.ToLower(anime.Name)
-		if strings.Contains(lower, "[pt-br]") || strings.Contains(lower, "[portugu") {
-			if s, ok := Registered(AnimeFire); ok {
-				return s, ResolvedSource{Kind: AnimeFire, Reason: "PT-BR language tag (default AnimeFire)"}
-			}
 		}
 	}
 

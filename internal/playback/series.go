@@ -9,12 +9,12 @@ import (
 	"sync"
 
 	"charm.land/huh/v2"
-	"github.com/alvarorichard/Goanime/internal/api"
-	"github.com/alvarorichard/Goanime/internal/api/providers"
-	"github.com/alvarorichard/Goanime/internal/models"
-	"github.com/alvarorichard/Goanime/internal/player"
-	"github.com/alvarorichard/Goanime/internal/tui"
-	"github.com/alvarorichard/Goanime/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/api"
+	"github.com/KidiXDev/GonimeId/internal/api/providers"
+	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/player"
+	"github.com/KidiXDev/GonimeId/internal/tui"
+	"github.com/KidiXDev/GonimeId/internal/util"
 )
 
 // printEpisodeNotFoundMsg prints a user-friendly warning when the selected

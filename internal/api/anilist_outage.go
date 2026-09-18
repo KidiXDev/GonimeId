@@ -5,7 +5,7 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"github.com/alvarorichard/Goanime/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/util"
 )
 
 // AniList can take its GraphQL API down without taking the site down. When it
@@ -29,7 +29,7 @@ import (
 // Nothing on this side can fix it; callers should fall back to another metadata
 // source rather than treat it as a lookup miss.
 var ErrAniListAPIDisabled = errors.New(
-	"AniList API is temporarily disabled upstream (not a GoAnime problem); using MyAnimeList metadata instead")
+	"AniList API is temporarily disabled upstream (not a GonimeId problem); using MyAnimeList metadata instead")
 
 // aniListDisabledMarkers are substrings of AniList's own outage message. Two
 // independent fragments are matched so a reworded notice still trips at least

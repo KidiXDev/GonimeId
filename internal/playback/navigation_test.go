@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alvarorichard/Goanime/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -26,7 +26,7 @@ func TestGetSocketPath_PerOS(t *testing.T) {
 	t.Parallel()
 	got := getSocketPath()
 	if runtime.GOOS == "windows" {
-		assert.Equal(t, `\\.\pipe\goanime_mpvsocket`, got)
+		assert.Equal(t, `\\.\pipe\gonimeid_mpvsocket`, got)
 	} else {
 		assert.True(t, strings.HasSuffix(got, "mpvsocket"))
 	}

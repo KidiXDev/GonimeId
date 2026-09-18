@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alvarorichard/Goanime/internal/models"
-	"github.com/alvarorichard/Goanime/internal/scraper/netx"
-	"github.com/alvarorichard/Goanime/internal/util"
-	"github.com/alvarorichard/Goanime/internal/util/jsonx"
+	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/scraper/netx"
+	"github.com/KidiXDev/GonimeId/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/util/jsonx"
 )
 
 // Jikan is the unofficial MyAnimeList API, used here as the stand-in for

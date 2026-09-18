@@ -50,4 +50,4 @@ jobs:
           ./internal/player
 
       - name: Run public SDK integration tests
-        run: go test -run Integration -count=1 -v ./pkg/goanime
+        run: go test -run Integration -count=1 -v ./pkg/gonimeid

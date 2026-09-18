@@ -8,8 +8,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/alvarorichard/Goanime/internal/api"
-	"github.com/alvarorichard/Goanime/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/api"
+	"github.com/KidiXDev/GonimeId/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -114,43 +114,6 @@ func TestFetchAnimeDetailsCore_NilAnime(t *testing.T) {
 	assert.NotPanics(t, func() { fetchAnimeDetailsCore(nil) })
 }
 
-func TestFetchAnimeDetailsCore_SuperFlixSkipsAll(t *testing.T) {
-	var aniCount, srcCount int32
-	withOverrides(t, appflowOverrides{
-		aniList: func(string) (*models.AniListResponse, error) {
-			atomic.AddInt32(&aniCount, 1)
-			return nil, nil
-		},
-		sourceDetails: func(*models.Anime) error {
-			atomic.AddInt32(&srcCount, 1)
-			return nil
-		},
-	})
-
-	fetchAnimeDetailsCore(&models.Anime{Name: "Spirited Away", Source: "SuperFlix"})
-	assert.Equal(t, int32(0), atomic.LoadInt32(&aniCount), "SuperFlix must skip AniList")
-	assert.Equal(t, int32(0), atomic.LoadInt32(&srcCount), "SuperFlix must skip source details")
-}
-
-func TestFetchAnimeDetailsCore_SFlixCallsSourceOnly(t *testing.T) {
-	var aniCount, srcCount int32
-	withOverrides(t, appflowOverrides{
-		aniList: func(string) (*models.AniListResponse, error) {
-			atomic.AddInt32(&aniCount, 1)
-			return nil, nil
-		},
-		sourceDetails: func(a *models.Anime) error {
-			atomic.AddInt32(&srcCount, 1)
-			assert.Equal(t, "SFlix", a.Source)
-			return nil
-		},
-	})
-
-	fetchAnimeDetailsCore(&models.Anime{Name: "Inception", Source: "SFlix"})
-	assert.Equal(t, int32(0), atomic.LoadInt32(&aniCount), "SFlix must skip AniList")
-	assert.Equal(t, int32(1), atomic.LoadInt32(&srcCount), "SFlix must call source details")
-}
-
 func TestFetchAnimeDetailsCore_MovieTypeCallsSourceOnly(t *testing.T) {
 	var srcCount atomic.Int32
 	withOverrides(t, appflowOverrides{
@@ -186,12 +149,12 @@ func TestFetchAnimeDetailsCore_SourceDetailsErrorIgnored(t *testing.T) {
 
 	// Must not panic — error logged at debug, function returns normally.
 	assert.NotPanics(t, func() {
-		fetchAnimeDetailsCore(&models.Anime{Name: "Movie", Source: "SFlix"})
+		fetchAnimeDetailsCore(&models.Anime{Name: "Movie", MediaType: models.MediaTypeMovie})
 	})
 }
 
 func TestFetchAnimeDetailsCore_NeedsAniListOnly_Success(t *testing.T) {
-	anime := &models.Anime{Name: "Bleach", Source: "AnimeFire"}
+	anime := &models.Anime{Name: "Bleach", Source: "Otakudesu"}
 	wantResp := makeAniListResp(42, 1234, "https://cdn/large.jpg")
 	withOverrides(t, appflowOverrides{
 		aniList: func(name string) (*models.AniListResponse, error) {
@@ -208,7 +171,7 @@ func TestFetchAnimeDetailsCore_NeedsAniListOnly_Success(t *testing.T) {
 }
 
 func TestFetchAnimeDetailsCore_NeedsAniListOnly_FetchError(t *testing.T) {
-	anime := &models.Anime{Name: "Bleach", Source: "AnimeFire"}
+	anime := &models.Anime{Name: "Bleach", Source: "Otakudesu"}
 	withOverrides(t, appflowOverrides{
 		aniList: func(string) (*models.AniListResponse, error) {
 			return nil, errors.New("AniList 500")
@@ -221,7 +184,7 @@ func TestFetchAnimeDetailsCore_NeedsAniListOnly_FetchError(t *testing.T) {
 }
 
 func TestFetchAnimeDetailsCore_NeedsAniListOnly_NoCoverDoesNotOverwrite(t *testing.T) {
-	anime := &models.Anime{Name: "X", Source: "AnimeFire", ImageURL: "existing.jpg"}
+	anime := &models.Anime{Name: "X", Source: "Otakudesu", ImageURL: "existing.jpg"}
 	resp := makeAniListResp(1, 2, "") // empty cover
 	withOverrides(t, appflowOverrides{
 		aniList: func(string) (*models.AniListResponse, error) { return resp, nil },
@@ -335,7 +298,7 @@ func TestFetchAnimeDetails_FullPipeline_WithPassthroughSpinner(t *testing.T) {
 		},
 	})
 
-	anime := &models.Anime{Name: "Test", Source: "AnimeFire"}
+	anime := &models.Anime{Name: "Test", Source: "Otakudesu"}
 	FetchAnimeDetails(anime)
 
 	assert.Equal(t, int32(1), spinnerCalls.Load())
@@ -347,7 +310,7 @@ func TestFetchAnimeDetails_FullPipeline_WithPassthroughSpinner(t *testing.T) {
 // GetAnimeEpisodes — every branch with mocked episode fetcher.
 // ---------------------------------------------------------------------------
 
-func TestGetAnimeEpisodes_NonSFlix_SpinnerSuccess(t *testing.T) {
+func TestGetAnimeEpisodes_Anime_SpinnerSuccess(t *testing.T) {
 	want := []models.Episode{{Num: 1, Number: "1"}, {Num: 2, Number: "2"}}
 	var spinnerHit atomic.Int32
 	withOverrides(t, appflowOverrides{
@@ -357,24 +320,10 @@ func TestGetAnimeEpisodes_NonSFlix_SpinnerSuccess(t *testing.T) {
 		},
 	})
 
-	got, err := GetAnimeEpisodes(&models.Anime{Name: "X", Source: "AnimeFire"})
+	got, err := GetAnimeEpisodes(&models.Anime{Name: "X", Source: "Otakudesu"})
 	require.NoError(t, err)
 	assert.Equal(t, want, got)
-	assert.Equal(t, int32(1), spinnerHit.Load(), "non-SFlix must use spinner")
-}
-
-func TestGetAnimeEpisodes_SFlix_BypassesSpinner_Success(t *testing.T) {
-	want := []models.Episode{{Num: 1, Number: "1"}}
-	var spinnerHit atomic.Int32
-	withOverrides(t, appflowOverrides{
-		runSpinner:  func(_ string, _ func()) { spinnerHit.Add(1) },
-		getEpisodes: func(*models.Anime) ([]models.Episode, error) { return want, nil },
-	})
-
-	got, err := GetAnimeEpisodes(&models.Anime{Name: "Y", Source: "SFlix"})
-	require.NoError(t, err)
-	assert.Equal(t, want, got)
-	assert.Equal(t, int32(0), spinnerHit.Load(), "SFlix must NOT use spinner")
+	assert.Equal(t, int32(1), spinnerHit.Load(), "anime sources use the spinner")
 }
 
 func TestGetAnimeEpisodes_FetchErrorWrapped(t *testing.T) {
@@ -383,7 +332,7 @@ func TestGetAnimeEpisodes_FetchErrorWrapped(t *testing.T) {
 		getEpisodes: func(*models.Anime) ([]models.Episode, error) { return nil, errors.New("net down") },
 	})
 
-	_, err := GetAnimeEpisodes(&models.Anime{Name: "Z", Source: "AnimeFire"})
+	_, err := GetAnimeEpisodes(&models.Anime{Name: "Z", Source: "Otakudesu"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to fetch episodes")
 	assert.Contains(t, err.Error(), "net down")
@@ -395,7 +344,7 @@ func TestGetAnimeEpisodes_EmptyListIsError(t *testing.T) {
 		getEpisodes: func(*models.Anime) ([]models.Episode, error) { return []models.Episode{}, nil },
 	})
 
-	_, err := GetAnimeEpisodes(&models.Anime{Name: "Z", Source: "AnimeFire"})
+	_, err := GetAnimeEpisodes(&models.Anime{Name: "Z", Source: "Otakudesu"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "does not have episodes")
 }

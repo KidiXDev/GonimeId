@@ -3,8 +3,8 @@ package playback
 import (
 	"errors"
 
-	"github.com/alvarorichard/Goanime/internal/tui"
-	"github.com/alvarorichard/Goanime/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/tui"
+	"github.com/KidiXDev/GonimeId/internal/util"
 )
 
 // menuItem maps a display label to the short code returned by GetUserInput.
@@ -22,7 +22,7 @@ var findMenuFunc = func(items []menuItem) (int, error) {
 	}
 	return tui.PickLabels(labels, tui.PickOptions{
 		Breadcrumb:   "Playback > Next",
-		WindowTitle:  "GoAnime - Menu",
+		WindowTitle:  "GonimeId - Menu",
 		ItemSingular: "option",
 		ItemPlural:   "options",
 	})

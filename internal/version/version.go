@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/alvarorichard/Goanime/internal/tracking"
+	"github.com/KidiXDev/GonimeId/internal/tracking"
 )
 
 // Version is set via -ldflags at build time by the CI workflow.
@@ -37,7 +37,7 @@ func HasVersionArg() bool {
 }
 
 func ShowVersion() {
-	fmt.Printf("GoAnime v%s", Version)
+	fmt.Printf("GonimeId v%s", Version)
 	if tracking.IsCgoEnabled {
 		fmt.Println(" (with SQLite tracking)")
 	} else {

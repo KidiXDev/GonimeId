@@ -28,9 +28,9 @@ func TestAddFeature(t *testing.T) {
 func TestAddExample(t *testing.T) {
 	t.Parallel()
 	var b strings.Builder
-	addExample(&b, "goanime naruto", "search naruto")
+	addExample(&b, "gonimeid naruto", "search naruto")
 	got := b.String()
-	assert.Contains(t, got, "goanime naruto")
+	assert.Contains(t, got, "gonimeid naruto")
 	assert.Contains(t, got, "search naruto")
 }
 

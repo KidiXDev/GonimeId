@@ -90,6 +90,15 @@ func newPickerModel(items []PickItem, opts PickOptions) *pickerModel {
 	delegate := list.NewDefaultDelegate()
 	// Dense rows: long catalogs (One Piece, etc.) show more episodes per screen.
 	delegate.SetSpacing(0)
+	// One line per row when no item carries details; otherwise the selected
+	// row rendered an empty second line and every list showed half the rows.
+	delegate.ShowDescription = false
+	for _, item := range items {
+		if singleLine(item.Details) != "" {
+			delegate.ShowDescription = true
+			break
+		}
+	}
 	delegate.Styles.NormalTitle = theme.Text.PaddingLeft(2)
 	delegate.Styles.NormalDesc = theme.Muted.PaddingLeft(4)
 	delegate.Styles.SelectedTitle = theme.SelectedTitle
@@ -251,6 +260,11 @@ func fancyListKeyMap() list.KeyMap {
 	return km
 }
 
+// pickerFooter is the one-line key legend under every picker. It replaces the
+// list's generated help, which listed each key twice (once from the key map,
+// once from the extra bindings) and overflowed the line.
+const pickerFooter = "↑↓ move · type to filter · enter select · esc back"
+
 // fancyListHelpKeys documents the dual input model: type-to-filter (fzf) and
 // arrows/vim navigation.
 func fancyListHelpKeys() []key.Binding {
@@ -291,12 +305,11 @@ func isTypeToFilterKey(msg tea.KeyPressMsg) bool {
 
 // View renders the full-width picker list (no side panel).
 func (m *pickerModel) View() tea.View {
-	footer := m.entries.Help.ShortHelpView(m.entries.ShortHelp())
-	view := tea.NewView(m.shell.Render(m.entries.View(), footer))
+	view := tea.NewView(m.shell.Render(m.entries.View(), pickerFooter))
 	view.AltScreen = true
 	title := m.options.WindowTitle
 	if title == "" {
-		title = "GoAnime"
+		title = "GonimeId"
 	}
 	view.WindowTitle = title
 	return view

@@ -1,4 +1,4 @@
-// Package leak_test runs GoAnime's concurrent flows end to end and asserts that
+// Package leak_test runs GonimeId's concurrent flows end to end and asserts that
 // none of them strands a goroutine, using Go 1.27's goroutineleak profile.
 //
 // This is the CI gate: it lives in its own package so the profile is taken over
@@ -17,9 +17,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alvarorichard/Goanime/internal/downloader/hls"
-	"github.com/alvarorichard/Goanime/internal/util"
-	"github.com/alvarorichard/Goanime/internal/util/leakcheck"
+	"github.com/KidiXDev/GonimeId/internal/downloader/hls"
+	"github.com/KidiXDev/GonimeId/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/util/leakcheck"
 )
 
 // hlsServer serves a small multi-segment playlist.

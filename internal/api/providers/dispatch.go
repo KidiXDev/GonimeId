@@ -7,11 +7,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alvarorichard/Goanime/internal/api"
-	"github.com/alvarorichard/Goanime/internal/api/source"
-	"github.com/alvarorichard/Goanime/internal/models"
-	"github.com/alvarorichard/Goanime/internal/scraper/netx"
-	"github.com/alvarorichard/Goanime/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/api"
+	"github.com/KidiXDev/GonimeId/internal/api/source"
+	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/scraper/netx"
+	"github.com/KidiXDev/GonimeId/internal/util"
 )
 
 // searchBreaker is the registry-wide per-source circuit breaker for search.
@@ -224,11 +224,11 @@ func FetchEpisodes(ctx context.Context, anime *models.Anime) ([]models.Episode, 
 	src, resolved := source.Resolve(anime)
 	if src == nil {
 		if util.StrictSourceResolution() {
-			return nil, fmt.Errorf("unrecognized source for %q (%s); best-effort disabled by GOANIME_STRICT_SOURCE", anime.Name, resolved.Reason)
+			return nil, fmt.Errorf("unrecognized source for %q (%s); best-effort disabled by GONIMEID_STRICT_SOURCE", anime.Name, resolved.Reason)
 		}
 		best, ok := source.Enabled(resolved.BestEffortKind())
 		if !ok {
-			return nil, fmt.Errorf("no enabled source for %q (%s); it may be off via GOANIME_DISABLED_SOURCES", resolved.BestEffortKind(), resolved.Reason)
+			return nil, fmt.Errorf("no enabled source for %q (%s); it may be off via GONIMEID_DISABLED_SOURCES", resolved.BestEffortKind(), resolved.Reason)
 		}
 		util.Warn("unrecognized source; listing episodes best-effort", "anime", anime.Name, "kind", best.Describe().Kind, "reason", resolved.Reason)
 		src = best
@@ -258,11 +258,11 @@ func FetchStreamURL(ctx context.Context, episode *models.Episode, anime *models.
 	src, resolved := source.Resolve(anime)
 	if src == nil {
 		if util.StrictSourceResolution() {
-			return "", fmt.Errorf("unrecognized source for %q (%s); best-effort disabled by GOANIME_STRICT_SOURCE", anime.Name, resolved.Reason)
+			return "", fmt.Errorf("unrecognized source for %q (%s); best-effort disabled by GONIMEID_STRICT_SOURCE", anime.Name, resolved.Reason)
 		}
 		best, ok := source.Enabled(resolved.BestEffortKind())
 		if !ok {
-			return "", fmt.Errorf("no enabled source for %q (%s); it may be off via GOANIME_DISABLED_SOURCES", resolved.BestEffortKind(), resolved.Reason)
+			return "", fmt.Errorf("no enabled source for %q (%s); it may be off via GONIMEID_DISABLED_SOURCES", resolved.BestEffortKind(), resolved.Reason)
 		}
 		util.Warn("unrecognized source; resolving stream best-effort", "anime", anime.Name, "kind", best.Describe().Kind, "reason", resolved.Reason)
 		src = best

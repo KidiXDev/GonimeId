@@ -9,7 +9,7 @@ import (
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/alvarorichard/Goanime/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -63,8 +63,8 @@ func TestAnimeResultItemDescription(t *testing.T) {
 		item animeResultItem
 		want string
 	}{
-		{name: "complete", item: animeResultItem{anime: &models.Anime{Source: "AnimeFire", Year: "2023", MediaType: models.MediaTypeAnime, Quality: "1080p"}}, want: "AnimeFire  •  2023  •  anime  •  1080p"},
-		{name: "partial", item: animeResultItem{anime: &models.Anime{Source: "AllAnime"}}, want: "AllAnime"},
+		{name: "complete", item: animeResultItem{anime: &models.Anime{Source: "Otakudesu", Year: "2023", MediaType: models.MediaTypeAnime, Quality: "1080p"}}, want: "Otakudesu  •  2023"},
+		{name: "partial", item: animeResultItem{anime: &models.Anime{Source: "Samehadaku"}}, want: "Samehadaku"},
 		{name: "single line", item: animeResultItem{anime: &models.Anime{Source: "Source\r\nInjected\x1b[2J"}}, want: "Source Injected"},
 		{name: "empty", item: animeResultItem{anime: &models.Anime{}}, want: "Information unavailable"},
 		{name: "nil", item: animeResultItem{}, want: "Information unavailable"},
@@ -119,7 +119,7 @@ func TestNewAnimeResultsModel(t *testing.T) {
 	assert.Len(t, model.results.Items(), 2)
 	assert.False(t, model.results.ShowTitle())
 	assert.False(t, model.results.ShowHelp())
-	assert.Equal(t, "Search > Results", model.shell.Breadcrumb)
+	assert.Equal(t, "Search › Results", model.shell.Breadcrumb)
 	assert.Equal(t, "Filter: ", model.results.FilterInput.Prompt)
 }
 
@@ -142,7 +142,7 @@ func TestAnimeResultsModelUpdate(t *testing.T) {
 		updated, cmd := model.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 		require.Same(t, model, updated)
 		assert.Nil(t, cmd)
-		assert.Equal(t, 72, model.results.Width())
+		assert.Equal(t, 120, model.results.Width(), "the list takes the full width")
 		assert.Equal(t, 36, model.results.Height())
 
 		_, _ = model.Update(tea.KeyPressMsg{Code: tea.KeyDown})
@@ -233,16 +233,13 @@ func TestAnimeResultsModelUpdate(t *testing.T) {
 		assert.NoError(t, model.err)
 	})
 
-	t.Run("responsive breakpoint preserves state", func(t *testing.T) {
+	t.Run("resize preserves selection", func(t *testing.T) {
 		t.Parallel()
 		model := newAnimeResultsModel([]*models.Anime{{Name: "Frieren"}, {Name: "Dungeon Meshi"}})
 		model.results.Select(1)
-		for _, size := range []struct {
-			width     int
-			wantWidth int
-		}{{99, 99}, {100, 60}, {101, 60}, {99, 99}} {
-			_, _ = model.Update(tea.WindowSizeMsg{Width: size.width, Height: 24})
-			assert.Equal(t, size.wantWidth, model.results.Width())
+		for _, width := range []int{99, 100, 140, 40} {
+			_, _ = model.Update(tea.WindowSizeMsg{Width: width, Height: 24})
+			assert.Equal(t, width, model.results.Width())
 			assert.Equal(t, 1, model.results.Index())
 		}
 	})
@@ -252,48 +249,31 @@ func TestAnimeResultsModelView(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name        string
-		width       int
-		height      int
-		wantDetails bool
+		name   string
+		width  int
+		height int
 	}{
-		{name: "minimum compact", width: 20, height: 5, wantDetails: false},
-		{name: "compact", width: 80, height: 8, wantDetails: false},
-		{name: "wide boundary", width: 100, height: 10, wantDetails: true},
-		{name: "wide", width: 120, height: 18, wantDetails: true},
+		{name: "minimum", width: 20, height: 5},
+		{name: "compact", width: 80, height: 8},
+		{name: "wide", width: 120, height: 18},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			model := newAnimeResultsModel([]*models.Anime{{Name: "Frieren with a very long title that must not overflow the terminal", Source: "AnimeFire", Year: "2023", MediaType: models.MediaTypeAnime, Quality: "1080p"}})
+			model := newAnimeResultsModel([]*models.Anime{{Name: "Frieren with a very long title that must not overflow the terminal", Source: "Otakudesu", Year: "2023", URL: "https://otakudesu.blog/anime/frieren/"}})
 			_, _ = model.Update(tea.WindowSizeMsg{Width: tt.width, Height: tt.height})
 
 			view := model.View()
 
 			assert.True(t, view.AltScreen)
-			assert.Equal(t, "GoAnime - Results", view.WindowTitle)
+			assert.Equal(t, "GonimeId - Results", view.WindowTitle)
 			if tt.width >= 9 {
-				assert.Contains(t, view.Content, "GOANIME")
+				assert.Contains(t, view.Content, "GONIMEID")
 			}
-			assert.Equal(t, tt.wantDetails, strings.Contains(view.Content, "Details"))
+			assert.NotContains(t, view.Content, "╭", "no side panel: the list gets the full width")
 			assert.LessOrEqual(t, lipgloss.Width(view.Content), tt.width)
 			assert.LessOrEqual(t, lipgloss.Height(view.Content), tt.height)
 		})
-	}
-}
-
-func TestRenderAnimeDetails(t *testing.T) {
-	t.Parallel()
-
-	theme := NewTheme(true)
-	details := renderAnimeDetails(&theme, "The Boys", "SuperFlix", "2019", "tv", "—")
-
-	assert.Contains(t, details, "Details")
-	assert.Contains(t, details, "The Boys")
-	assert.Contains(t, details, "SuperFlix")
-	assert.NotContains(t, details, theme.Primary.Render("Details")+" ")
-	for line := range strings.SplitSeq(details, "\n") {
-		assert.False(t, strings.HasSuffix(line, " "), "line has unstyled trailing padding: %q", line)
 	}
 }
 

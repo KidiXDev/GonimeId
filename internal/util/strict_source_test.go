@@ -23,7 +23,7 @@ func TestStrictSourceResolution(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("GOANIME_STRICT_SOURCE", tt.value)
+			t.Setenv("GONIMEID_STRICT_SOURCE", tt.value)
 			assert.Equal(t, tt.want, StrictSourceResolution())
 		})
 	}

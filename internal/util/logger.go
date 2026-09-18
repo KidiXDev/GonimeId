@@ -11,7 +11,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 	"charm.land/log/v2"
-	"github.com/alvarorichard/Goanime/internal/tui"
+	"github.com/KidiXDev/GonimeId/internal/tui"
 	"github.com/charmbracelet/colorprofile"
 )
 
@@ -51,12 +51,12 @@ func getColoredPrefix() string {
 	return prefixForProfile(tui.ConsoleColorProfile(os.Stderr))
 }
 
-// prefixForProfile builds the GoAnime logger prefix for the given profile.
+// prefixForProfile builds the GonimeId logger prefix for the given profile.
 // Exported-to-tests via package scope so regressions cannot reintroduce
 // baked-in TrueColor ANSI on ASCII/NoTTY profiles.
 func prefixForProfile(p colorprofile.Profile) string {
 	if p <= colorprofile.ASCII {
-		return "GoAnime"
+		return "GonimeId"
 	}
 	style := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#FFFFFF")).
@@ -64,14 +64,14 @@ func prefixForProfile(p colorprofile.Profile) string {
 		Bold(true).
 		Padding(0, 1).
 		MarginRight(1)
-	return style.Render("GoAnime")
+	return style.Render("GonimeId")
 }
 
 // GetLogDir returns the platform-specific directory for storing log files.
 // The paths are chosen to be easily accessible for non-technical users:
-//   - Windows: %LOCALAPPDATA%\GoAnime\logs
-//   - macOS:   ~/Library/Logs/GoAnime
-//   - Linux:   ~/.local/share/goanime/logs
+//   - Windows: %LOCALAPPDATA%\GonimeId\logs
+//   - macOS:   ~/Library/Logs/GonimeId
+//   - Linux:   ~/.local/share/gonimeid/logs
 func GetLogDir() string {
 	switch runtime.GOOS {
 	case "windows":
@@ -80,13 +80,13 @@ func GetLogDir() string {
 			home, _ := os.UserHomeDir()
 			localAppData = filepath.Join(home, "AppData", "Local")
 		}
-		return filepath.Join(localAppData, "GoAnime", "logs")
+		return filepath.Join(localAppData, "GonimeId", "logs")
 	case "darwin":
 		home, _ := os.UserHomeDir()
-		return filepath.Join(home, "Library", "Logs", "GoAnime")
+		return filepath.Join(home, "Library", "Logs", "GonimeId")
 	default: // linux and others
 		home, _ := os.UserHomeDir()
-		return filepath.Join(home, ".local", "share", "goanime", "logs")
+		return filepath.Join(home, ".local", "share", "gonimeid", "logs")
 	}
 }
 
@@ -100,16 +100,16 @@ func initFileLogger() *os.File {
 		return nil
 	}
 
-	// Each session gets a unique file: goanime_2026-02-27_15-44-10.log
+	// Each session gets a unique file: gonimeid_2026-02-27_15-44-10.log
 	// This ensures multiple runs per day never collide or mix logs
 	now := time.Now()
-	filename := fmt.Sprintf("goanime_%s.log", now.Format("2006-01-02_15-04-05"))
+	filename := fmt.Sprintf("gonimeid_%s.log", now.Format("2006-01-02_15-04-05"))
 	logPath := filepath.Join(logDir, filename)
 
 	// In the unlikely event of two runs in the same second, append a counter
 	if _, err := os.Stat(logPath); err == nil {
 		for i := 2; i <= 100; i++ {
-			candidate := filepath.Join(logDir, fmt.Sprintf("goanime_%s_%d.log", now.Format("2006-01-02_15-04-05"), i))
+			candidate := filepath.Join(logDir, fmt.Sprintf("gonimeid_%s_%d.log", now.Format("2006-01-02_15-04-05"), i))
 			if _, err := os.Stat(candidate); os.IsNotExist(err) {
 				logPath = candidate
 				break
@@ -131,7 +131,7 @@ func initFileLogger() *os.File {
 	}
 
 	// Write session header
-	header := fmt.Sprintf("===== GoAnime Debug Session — %s =====\n\n", now.Format("2006-01-02 15:04:05"))
+	header := fmt.Sprintf("===== GonimeId Debug Session — %s =====\n\n", now.Format("2006-01-02 15:04:05"))
 	_, _ = f.WriteString(header)
 
 	// Create a plain-text logger that writes to the file (no ANSI colors)
@@ -139,7 +139,7 @@ func initFileLogger() *os.File {
 		ReportCaller:    true,
 		ReportTimestamp: true,
 		TimeFormat:      "15:04:05",
-		Prefix:          "GoAnime",
+		Prefix:          "GonimeId",
 	})
 	fileLogger.SetLevel(log.DebugLevel)
 	fileLogger.SetColorProfile(colorprofile.ASCII) // no colors in the file

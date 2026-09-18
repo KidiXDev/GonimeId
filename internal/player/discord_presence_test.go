@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alvarorichard/Goanime/internal/discord"
-	"github.com/alvarorichard/Goanime/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/discord"
+	"github.com/KidiXDev/GonimeId/internal/models"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -38,7 +38,7 @@ func TestInitDiscordPresence_StartsUpdaterAndReturns(t *testing.T) {
 
 	// Use a socket path that doesn't exist so waitForPlaybackStart fails fast.
 	// On Linux/macOS unix sockets, connect fails immediately for missing paths.
-	fakeSock := "/tmp/goanime_p17_test_nonexistent_socket"
+	fakeSock := "/tmp/gonimeid_p17_test_nonexistent_socket"
 
 	ep := &models.Episode{Number: "1", Num: 1}
 

@@ -14,19 +14,19 @@
 // ROOT CAUSE:
 // The os.TempDir() function on macOS returns a path with a trailing slash
 // (e.g., "/var/folders/24/_1_ntj3s67bc4cqxg2vszb300000gn/T/").
-// When constructing the socket path using fmt.Sprintf("%s/goanime_mpvsocket_%s", tmpDir, id),
+// When constructing the socket path using fmt.Sprintf("%s/gonimeid_mpvsocket_%s", tmpDir, id),
 // this resulted in a double-slash path like:
 //
-//	"/var/folders/.../T//goanime_mpvsocket_xxx"
+//	"/var/folders/.../T//gonimeid_mpvsocket_xxx"
 //
 // The double-slash caused the Unix socket connection to fail, as mpv created
-// the socket at one path while goanime tried to connect to another.
+// the socket at one path while gonimeid tried to connect to another.
 //
 // SOLUTION:
 // Use filepath.Join() instead of fmt.Sprintf() for path construction.
 // filepath.Join() properly handles trailing slashes and produces clean paths:
 //
-//	socketPath = filepath.Join(os.TempDir(), fmt.Sprintf("goanime_mpvsocket_%s", randomNumber))
+//	socketPath = filepath.Join(os.TempDir(), fmt.Sprintf("gonimeid_mpvsocket_%s", randomNumber))
 //
 // This ensures the socket path is always valid regardless of the OS-specific
 // behavior of os.TempDir().
@@ -61,7 +61,7 @@ func TestMacOSSocketPathConstruction(t *testing.T) {
 		tmpDir = strings.TrimSuffix(tmpDir, "/")
 
 		randomNumber := fmt.Sprintf("%x", time.Now().UnixNano())
-		socketPath := fmt.Sprintf("%s/goanime_mpvsocket_%s", tmpDir, randomNumber)
+		socketPath := fmt.Sprintf("%s/gonimeid_mpvsocket_%s", tmpDir, randomNumber)
 
 		// Verify no double slashes in the path
 		assert.NotContains(t, socketPath, "//", "Socket path should not contain double slashes")
@@ -93,7 +93,7 @@ func TestMacOSSocketPathConstruction(t *testing.T) {
 	t.Run("filepath.Join handles trailing slash correctly", func(t *testing.T) {
 		// This tests the actual implementation approach used in player.go
 		randomNumber := fmt.Sprintf("%x", time.Now().UnixNano())
-		socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("goanime_mpvsocket_%s", randomNumber))
+		socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("gonimeid_mpvsocket_%s", randomNumber))
 
 		// filepath.Join should handle the trailing slash
 		assert.NotContains(t, socketPath, "//", "filepath.Join should not create double slashes")
@@ -111,7 +111,7 @@ func TestUnixSocketCreationAndConnection(t *testing.T) {
 	t.Run("Create and connect to Unix socket", func(t *testing.T) {
 		// Create a unique socket path
 		tmpDir := strings.TrimSuffix(os.TempDir(), "/")
-		socketPath := filepath.Join(tmpDir, fmt.Sprintf("goanime_test_socket_%d", time.Now().UnixNano()))
+		socketPath := filepath.Join(tmpDir, fmt.Sprintf("gonimeid_test_socket_%d", time.Now().UnixNano()))
 
 		// Ensure socket file doesn't exist
 		_ = os.Remove(socketPath)
@@ -137,7 +137,7 @@ func TestUnixSocketCreationAndConnection(t *testing.T) {
 
 		<-serverReady
 
-		// Try to connect to the socket (simulating goanime client)
+		// Try to connect to the socket (simulating gonimeid client)
 		conn, err := net.Dial("unix", socketPath)
 		require.NoError(t, err, "Should be able to connect to Unix socket")
 		defer func() { _ = conn.Close() }()
@@ -147,7 +147,7 @@ func TestUnixSocketCreationAndConnection(t *testing.T) {
 
 	t.Run("Socket connection with retry logic", func(t *testing.T) {
 		tmpDir := strings.TrimSuffix(os.TempDir(), "/")
-		socketPath := filepath.Join(tmpDir, fmt.Sprintf("goanime_test_socket_retry_%d", time.Now().UnixNano()))
+		socketPath := filepath.Join(tmpDir, fmt.Sprintf("gonimeid_test_socket_retry_%d", time.Now().UnixNano()))
 
 		_ = os.Remove(socketPath)
 
@@ -252,7 +252,7 @@ func TestMacOSSpecificTempDir(t *testing.T) {
 
 	t.Run("Can create files in TempDir", func(t *testing.T) {
 		cleanedDir := strings.TrimSuffix(tmpDir, "/")
-		testFile := filepath.Join(cleanedDir, fmt.Sprintf("goanime_test_%d", time.Now().UnixNano()))
+		testFile := filepath.Join(cleanedDir, fmt.Sprintf("gonimeid_test_%d", time.Now().UnixNano()))
 
 		// Create test file
 		f, err := os.Create(testFile)
@@ -287,7 +287,7 @@ func BenchmarkSocketPathConstruction(b *testing.B) {
 		tmpDir := os.TempDir()
 		tmpDir = strings.TrimSuffix(tmpDir, "/")
 		randomNumber := fmt.Sprintf("%x", time.Now().UnixNano())
-		_ = fmt.Sprintf("%s/goanime_mpvsocket_%s", tmpDir, randomNumber)
+		_ = fmt.Sprintf("%s/gonimeid_mpvsocket_%s", tmpDir, randomNumber)
 	}
 }
 
@@ -325,7 +325,7 @@ func TestExponentialBackoffSocketConnection(t *testing.T) {
 
 	t.Run("Connection with delayed socket creation (simulating slow stream)", func(t *testing.T) {
 		tmpDir := strings.TrimSuffix(os.TempDir(), "/")
-		socketPath := filepath.Join(tmpDir, fmt.Sprintf("goanime_slow_stream_%d", time.Now().UnixNano()))
+		socketPath := filepath.Join(tmpDir, fmt.Sprintf("gonimeid_slow_stream_%d", time.Now().UnixNano()))
 
 		_ = os.Remove(socketPath)
 

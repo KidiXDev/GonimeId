@@ -12,7 +12,7 @@ import (
 // Regression tests (added 2026-05-01)
 //
 // Symptom: after "Going back to anime selection..." the user's debug log
-// (goanime_2026-05-01_00-41-46.log lines 161-195) showed all 4 fast sources
+// (gonimeid_2026-05-01_00-41-46.log lines 161-195) showed all 4 fast sources
 // logging "Search results received" (which fires after the per-source results
 // are appended to allResults inside searchAllScrapersConcurrent), yet the
 // main thread reported "No anime found with the name: naruto" only 2s in —

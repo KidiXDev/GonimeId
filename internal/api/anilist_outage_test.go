@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/alvarorichard/Goanime/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -203,7 +203,7 @@ func TestEnrichAnimeData_FallsBackToJikanDuringOutage(t *testing.T) {
 }
 
 // If MyAnimeList is down too — as it was while this was written — the error has
-// to name both, so the log points at the outages rather than at GoAnime.
+// to name both, so the log points at the outages rather than at GonimeId.
 func TestEnrichAnimeData_ReportsBothOutages(t *testing.T) {
 	resetAniListDisabledForTest()
 	t.Cleanup(resetAniListDisabledForTest)

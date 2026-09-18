@@ -5,10 +5,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/alvarorichard/Goanime/internal/api/providers/metadata"
-	"github.com/alvarorichard/Goanime/internal/models"
-	"github.com/alvarorichard/Goanime/internal/player"
-	"github.com/alvarorichard/Goanime/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/api/providers/metadata"
+	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/player"
+	"github.com/KidiXDev/GonimeId/internal/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -28,7 +28,7 @@ type enrichRecorder struct {
 // These tests mutate package seams and process env, so none are parallel.
 func stubWorkflow(t *testing.T, anime *models.Anime) *enrichRecorder {
 	t.Helper()
-	t.Setenv("GOANIME_STRICT_SOURCE", "1")
+	t.Setenv("GONIMEID_STRICT_SOURCE", "1")
 
 	rec := &enrichRecorder{}
 	prevSearch, prevEnrich := workflowSearchFn, workflowEnrichFn
@@ -48,7 +48,7 @@ func stubWorkflow(t *testing.T, anime *models.Anime) *enrichRecorder {
 }
 
 // offlineAnime returns an anime whose URL is loopback (blocked by SafeGet) and
-// whose source is unrecognizable (errors under GOANIME_STRICT_SOURCE).
+// whose source is unrecognizable (errors under GONIMEID_STRICT_SOURCE).
 func offlineAnime() *models.Anime {
 	return &models.Anime{
 		Name:      "Workflow Test Anime",

@@ -1,207 +1,128 @@
-<h4 align="center">
-    <p>
-        <b>English</b> |
-        <a href="https://github.com/alvarorichard/GoAnime/blob/main/README_pt-br.md">Рortuguês</a>
-    </p>
-</h4>
-
 <p align="center">
-  <img src="https://github.com/alvarorichard/GoAnime/assets/102667323/49600255-d5a2-4405-81d1-a08cebae569a" alt="GoAnime Logo" />
+    <a href="https://github.com/KidiXDev/GonimeId/blob/main/LICENSE"><img src="https://img.shields.io/github/license/KidiXDev/GonimeId" alt="License"></a>
+    <img src="https://img.shields.io/github/last-commit/KidiXDev/GonimeId" alt="Last commit">
+    <a href="https://github.com/KidiXDev/GonimeId/actions"><img src="https://github.com/KidiXDev/GonimeId/actions/workflows/ci.yml/badge.svg" alt="Build Status"></a>
 </p>
 
-<p align="center">
-    <a href="alvarorichard/GoAnime/blob/master/LICENSE"><img src="https://img.shields.io/github/license/alvarorichard/GoAnime" alt="GitHub license"></a>
-    <img src="https://img.shields.io/github/stars/alvarorichard/GoAnime" alt="GitHub stars">
-    <img src="https://img.shields.io/github/last-commit/alvarorichard/GoAnime" alt="GitHub last commit">
-    <img src="https://img.shields.io/github/forks/alvarorichard/GoAnime?style=social" alt="GitHub forks">
-    <a href="https://github.com/alvarorichard/GoAnime/actions"><img src="https://github.com/alvarorichard/GoAnime/actions/workflows/ci.yml/badge.svg" alt="Build Status"></a>
-    <img src="https://img.shields.io/github/contributors/alvarorichard/GoAnime" alt="GitHub contributors">
-    <a href="https://discord.gg/FbQuf78D9G"><img src="https://img.shields.io/badge/Discord-Community-7289DA?logo=discord&logoColor=white" alt="Discord"></a>
-</p>
+# GonimeId
 
-# GoAnime
+GonimeId is a terminal app (TUI) for watching and downloading **Indonesian-subtitled anime** in mpv.
+Search once, pick a title, pick an episode, pick a resolution — it plays.
 
-GoAnime is a simple text-based user interface (TUI) built in Go, allowing users
-to search for anime and either play or download episodes directly in mpv. It
-scrapes data from websites to provide a selection of anime and episodes, with
-support for both subbed and dubbed content in English and Portuguese.
+It is a fork of [GoAnime](https://github.com/alvarorichard/GoAnime) by
+[alvarorichard](https://github.com/alvarorichard), refocused on Indonesian
+sources. The player, downloader, upscaler and tracking come from upstream; the
+Portuguese, English and movie/TV sources were removed.
 
-## Table of contents
+## Sources
 
-1.  [Features](#features)
-2.  [Prerequisites](#prerequisites)
-3.  [Installation](#installation)
-4.  [How to use](#how-to-use)
-5.  [Advanced usage](#advanced-usage)
-6.  [Troubleshooting](#troubleshooting)
-7.  [Community and mobile](#community-and-mobile)
-8.  [Contributing](#contributing)
+| Source | Resolutions | Notes |
+|---|---|---|
+| [Otakudesu](https://otakudesu.blog) | 360p – 1080p | Download-section files (Pixeldrain) are preferred; streaming mirrors are the fallback |
+| [Samehadaku](https://v2.samehadaku.how) | 360p – 1080p | Pixeldrain servers, Blogspot fallback |
+
+Both are searched together by default. Dead or geo-locked files are probed and
+skipped before anything reaches mpv.
 
 ## Features
 
-*   Search for anime, movies, and TV shows by name
-*   Simultaneous multi-source searching by default across all active platforms
-*   Support for subbed and dubbed content in English and Portuguese
-*   Play online with quality selection or download episodes
-*   Discord RPC integration to show what you're watching
-*   Progress tracking: Resume playback and track watched episodes
-
-*   Built-in upscaling (Anime4K) for better video quality
+* Search across both sources, one picker
+* Resolution picker (remembered for the session) or `--quality 1080p`
+* Play in mpv with skip-intro/outro (AniSkip) and resume tracking (SQLite build)
+* Download single episodes, ranges, or everything — Plex/Jellyfin folder naming
+* Real-time Anime4K upscaling in mpv
+* Discord Rich Presence
 
 ## Prerequisites
 
-Before installing GoAnime, ensure you have the following dependency installed:
-*   [mpv](https://mpv.io/) (Media player, latest version recommended)
-
-## Installation
-
-Choose the installation method that best fits your system.
-
-### Universal installation
-
-If you have Go installed on your system, you can install GoAnime via `go install`:
+* [mpv](https://mpv.io/) — required
+* `ffmpeg`/`ffprobe` — optional, only for some downloads
 
 ```bash
-go install github.com/alvarorichard/Goanime/cmd/goanime@latest
+# Arch / CachyOS
+sudo pacman -S mpv ffmpeg
+# Debian / Ubuntu
+sudo apt install mpv ffmpeg
+# macOS
+brew install mpv ffmpeg
 ```
 
-### macOS
+## Install
 
-Install `mpv` using Homebrew, then download and configure GoAnime:
+From source (Go 1.25+):
 
 ```bash
-brew install mpv
-
-curl -Lo goanime https://github.com/alvarorichard/GoAnime/releases/latest/download/goanime-apple-darwin
-chmod +x goanime
-sudo mv goanime /usr/local/bin/
-
-sudo xattr -d com.apple.quarantine /usr/local/bin/goanime
+go install github.com/KidiXDev/GonimeId/cmd/gonimeid@latest
 ```
 
-### Linux
-
-<details>
-<summary><b>Debian / Ubuntu (and derivatives)</b></summary>
+Or clone and build:
 
 ```bash
-sudo apt update
-sudo apt install mpv -y
-
-curl -LO https://github.com/alvarorichard/Goanime/releases/latest/download/goanime-linux-amd64.tar.gz
-tar -xzf goanime-linux-amd64.tar.gz
-chmod +x goanime-linux-amd64
-sudo mv goanime-linux-amd64 /usr/local/bin/goanime
+git clone https://github.com/KidiXDev/GonimeId.git
+cd GonimeId
+CGO_ENABLED=0 go build -o gonimeid ./cmd/gonimeid
 ```
-</details>
 
-<details>
-<summary><b>Arch Linux / Manjaro (AUR)</b></summary>
+With watch-progress tracking (needs SQLite headers): `cd build && ./buildlinux-with-sqlite.sh`.
+
+## Usage
 
 ```bash
-yay -S goanime
-```
-</details>
+gonimeid                       # interactive: search → title → episode → quality → play
+gonimeid "one piece"           # search directly (use spaces, not hyphens)
+gonimeid --source samehadaku "naruto"
+gonimeid --quality 1080p "frieren"
 
-<details>
-<summary><b>Fedora</b></summary>
+gonimeid -d "one piece" 1      # download episode 1
+gonimeid -d -r "naruto" 1-12   # download a range
+gonimeid -d -a "frieren"       # download everything
+gonimeid -d -o ~/Anime "bleach" 3
 
-```bash
-sudo dnf update
-sudo dnf install mpv
-
-curl -LO https://github.com/alvarorichard/Goanime/releases/latest/download/goanime-linux-amd64.tar.gz
-tar -xzf goanime-linux-amd64.tar.gz
-chmod +x goanime-linux-amd64
-sudo mv goanime-linux-amd64 /usr/local/bin/goanime
-```
-</details>
-
-### Windows
-
-**Strongly Recommended:** Use our installer for the best experience.
-
-1.  Download and run the [GoAnime Windows Installer](https://github.com/alvarorichard/GoAnime/releases/latest).
-2.  Install `mpv` for Windows and ensure it is available in your system's path.
-
-## How to use
-
-Follow these steps for a simple, interactive watching experience:
-
-1.  **Open your terminal.**
-2.  **Start the app:** Type `goanime` and press `Enter`.
-3.  **Search:** Provide the name of the anime you want to watch.
-4.  **Select:** Navigate the resulting list using your arrow keys and press 
-    `Enter` to pick an anime.
-5.  **Watch:** Select an episode, choose your preferred streaming quality, and 
-    the video will automatically launch in `mpv`.
-
-## Advanced usage
-
-### Direct search
-
-To bypass the initial prompt, directly pass the anime name:
-
-```bash
-goanime "Naruto"
+gonimeid --upscale video.mp4   # Anime4K upscale a file
+gonimeid --update              # self-update from GitHub releases
+gonimeid --help
 ```
 
+In the play menu, **Play** is the first item; Esc goes back one step everywhere.
 
+### Environment
 
-### Updating the app
+| Variable | Effect |
+|---|---|
+| `GONIMEID_DISABLED_SOURCES=Otakudesu` | turn a source off without rebuilding (comma-separated) |
+| `GONIMEID_ENABLED_SOURCES=…` | opt in to a source shipped disabled |
+| `GONIMEID_STRICT_SOURCE=1` | never fall back to another source |
 
-Keep GoAnime updated to the newest features without manual downloads:
-
-```bash
-goanime --update
-```
-
-### Help
-
-To view all available commands and flags:
-
-```bash
-goanime -h
-```
+Debug logs: run with `--debug`; the log path is printed at startup
+(`~/.local/share/gonimeid/logs/` on Linux).
 
 ## Troubleshooting
 
-### TLS errors behind a corporate proxy or custom CA
+**Nothing plays / bounces back to the episode list** — run with `--debug` and
+read the lines after `Loading episode...`. Usually the chosen file was removed
+upstream; pick another resolution or the other source.
 
-If every request fails with a certificate error — typically on a network that
-inspects TLS with its own root CA — point GoAnime at that CA bundle:
+**Search returns nothing for a multi-word title** — type it with spaces
+(`"naruto kecil"`), not hyphens.
+
+**TLS errors behind a corporate proxy / custom CA** — point Go at the CA bundle:
 
 ```bash
-export SSL_CERT_FILE=/path/to/corporate-ca.pem   # a single PEM bundle
-export SSL_CERT_DIR=/path/to/ca-certificates.d   # or a directory of PEMs
+export SSL_CERT_FILE=/path/to/corporate-ca.pem
+export SSL_CERT_DIR=/path/to/ca-certificates.d
 ```
-
-Since Go 1.27 these variables are honoured on **Windows and macOS** as well, not
-just Linux: when either is set, GoAnime verifies certificates with Go's own
-verifier against your bundle instead of the platform certificate store. To go
-back to the platform store without unsetting the variables, run with
-`GODEBUG=x509sslcertoverrideplatform=0`.
-
-## Community and mobile
-
-Join our Discord for support, feedback, and updates:
-[Join the Discord server](https://discord.gg/6nZ2SYv3)
-
-A mobile version of GoAnime is also available for Android devices:
-[GoAnime Mobile](https://github.com/alvarorichard/goanime-mobile)
 
 ## Contributing
 
-Contributions to improve or enhance are always welcome.
+See [docs/Development.md](docs/Development.md) and
+[docs/ADDING_A_SOURCE.md](docs/ADDING_A_SOURCE.md) (the next Indonesian source
+is one leaf package plus one provider block).
 
-See the [development guide](docs/Development.md).
+## Credits
 
-Quick start:
-1.  Fork the project and read the development guide.
-2.  Create your feature branch from `dev` (`git checkout -b feature/foo`).
-3.  Follow formatting standards (`go fmt`).
-4.  Commit your changes (`git commit -m 'feat: add foo'`).
-5.  Push to the branch (`git push origin feature/foo`).
-6.  Open a pull request to the `dev` branch.
+* [GoAnime](https://github.com/alvarorichard/GoAnime) — the upstream project this fork is built on
+* [mpv](https://mpv.io/), [Anime4K](https://github.com/bloc97/Anime4K), [AniSkip](https://api.aniskip.com/)
 
-All changes must go through the `dev` branch first.
+## License
+
+MIT — see [LICENSE](LICENSE). Upstream copyright is retained.

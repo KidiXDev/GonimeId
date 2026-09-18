@@ -196,13 +196,13 @@ func TestFindAssetForPlatform_DelegatesToCurrentPlatform(t *testing.T) {
 			Name               string `json:"name"`
 			BrowserDownloadURL string `json:"browser_download_url"`
 		}{
-			{Name: fmt.Sprintf("goanime-%s-%s", runtime.GOOS, runtime.GOARCH),
+			{Name: fmt.Sprintf("gonimeid-%s-%s", runtime.GOOS, runtime.GOARCH),
 				BrowserDownloadURL: "http://x"},
-			{Name: "goanime-darwin", BrowserDownloadURL: "http://x"},
-			{Name: "goanime-linux", BrowserDownloadURL: "http://x"},
-			{Name: "goanime", BrowserDownloadURL: "http://x"},
-			{Name: "goanime-windows.exe", BrowserDownloadURL: "http://x"},
-			{Name: "goanime.exe", BrowserDownloadURL: "http://x"},
+			{Name: "gonimeid-darwin", BrowserDownloadURL: "http://x"},
+			{Name: "gonimeid-linux", BrowserDownloadURL: "http://x"},
+			{Name: "gonimeid", BrowserDownloadURL: "http://x"},
+			{Name: "gonimeid-windows.exe", BrowserDownloadURL: "http://x"},
+			{Name: "gonimeid.exe", BrowserDownloadURL: "http://x"},
 		},
 	}
 	_, _, err := findAssetForPlatform(rel)

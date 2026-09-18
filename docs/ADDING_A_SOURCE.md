@@ -1,12 +1,15 @@
 # Adding and Removing a Source
 
-> **Reference implementation: `Goyabu`.** It is the simplest complete source in
-> the tree — no seasons, no browser gate, no quality argument. Read it, copy it,
-> rename it. This document lists *where* to copy from and *what* to change; it
-> deliberately contains no invented example code, because invented code in docs
-> rots without anything failing.
+> **Reference implementation: `Samehadaku`** (`internal/scraper/providers/samehadaku`).
+> Both live sources are Indonesian-subtitled WordPress sites and share one
+> provider type (`idSubProvider` in `source_providers.go`); a third such source
+> is a new leaf package plus one `source.Register` call. This document lists
+> *where* to copy from and *what* to change; it deliberately contains no
+> invented example code, because invented code in docs rots without anything
+> failing.
 >
-> Verified against the tree at v1.8.6.
+> Line numbers below date from the GoAnime tree (v1.8.6) this fork started
+> from; the structure still holds, the numbers may not.
 
 ---
 
@@ -29,21 +32,21 @@ yet eliminated (see [Known friction](#known-friction)).
 
 ## Touchpoints
 
-Read the Goyabu column as "copy this, rename it".
+Read the "where" column as "copy this, rename it".
 
-| # | File | Where Goyabu does it | Required |
+| # | File | Where | Required |
 |---|---|---|:---:|
 | 1 | `internal/scraper/providers/<name>/{doc.go,client.go}` | whole package | ✅ |
 | 2 | `internal/scraper/manager.go` | import `:22` · `ScraperType` const `:32` · `NewAdapter` case `:54` · `scraperDisplayName` `:71` · `scraperLanguageTag` `:87` · adapter type `:253` | ✅ |
 | 3 | `internal/api/source/kind.go` | `SourceKind` const `:14` · `scraperTypeMap` `:32` | ✅ |
 | 4 | `internal/api/providers/source_providers.go` | provider block `:225–299` | ✅ |
-| 5 | `internal/api/providers/tagging.go` | `sourceDisplayName` `:33` · `isPTBR` `:64` (+ `languageTag` if not PT-BR) | ✅ |
+| 5 | `internal/api/providers/tagging.go` | nothing to add: `tagResults` stamps `Source` from the kind | ⚪ |
 | 6 | `internal/api/providers/naming/naming.go` | `tagPattern` regex `:75` | ✅ |
 | 7 | `internal/scraper/source_health.go` | `healthTargets` `:49` · `DefaultHealthCheckQuery` `:38` | 🟡 |
 | 8 | `internal/api/enhanced.go` | `--source` case `:247` · `ptbr` group `:252` · backfill by name `:290` · backfill by URL `:302` · debug print `:320` · `sourceBreakdown` field `:939` · `countSourceBreakdown` case `:959` | 🟡 |
 | 9 | `internal/api/anime.go` | `reSpaceDashNoise` source alternation `:540` | 🟡 |
-| 10 | `internal/util/util.go` | `--source` help text `:461` — currently stale: lists `flixhq`, omits `goyabu` and `superflix` | ⚪ |
-| 11 | `pkg/goanime/types/source.go` | public SDK enum — **breaking change** | ⚪ |
+| 10 | `internal/util/util.go` + `help.go` | `--source` help text | ⚪ |
+| 11 | `pkg/gonimeid/types/source.go` | public SDK enum — **breaking change** | ⚪ |
 | 12 | tests | see [Tests](#tests) | ✅ |
 
 Skip #6 and your tag is never stripped from titles → wrong AniList matches. Skip
@@ -59,10 +62,12 @@ Nothing to wire for `init()`: the blank import already exists at
 
 Build after each step — every one leaves the tree green.
 
-**1. Leaf client.** Copy `internal/scraper/providers/goyabu/`. Keep the shape:
+**1. Leaf client.** Copy `internal/scraper/providers/samehadaku/`. Keep the shape:
 `New<Name>Client()` (no network I/O — it runs under `sync.Once`), `SearchAnime`,
-`GetAnimeEpisodes`, `GetEpisodeStreamURL`, `NewClientForTest`, plus the
-`decorateRequest` / `shouldRetry` / `sleep` / `resolveURL` helpers.
+`GetAnimeEpisodes`, `GetEpisodeStreamURL`, `Qualities`, `NewClientForTest`,
+plus the `fetch` / `sleepCtx` / `playable` helpers. Probe every direct file URL
+with `playable` before returning it — IP-locked and removed files must fall
+through to the next candidate, not reach mpv.
 Non-negotiable: `util.NewFastClient()` for the HTTP client (SSRF-guarded),
 regexes compiled at package level (`client.go:32`), errors via
 `netx.NewParserError` / `NewBlockedChallengeError` / `NewHTTPStatusError` —
@@ -73,24 +78,26 @@ regexes compiled at package level (`client.go:32`), errors via
 `iota`: **append at the end, never insert.** If your stream needs a referer,
 subtitles or an audio language, put them in `GetStreamURL`'s
 `metadata map[string]string` under `referer` / `subtitles` / `subtitle_labels` /
-`audio_lang` — the contract `SuperFlixAdapter` uses and the player reads.
+`audio_lang` — the contract the player reads.
 
 **3. Kind.** `kind.go` — string constant plus the `scraperTypeMap` entry.
 
-**4. Provider.** Copy `source_providers.go:225–298`. The only part that is design
-rather than boilerplate is the descriptor:
+**4. Provider.** Add a `source.Register(&idSubProvider{...})` call in
+`source_providers.go`'s `init()`. The only part that is design rather than
+boilerplate is the descriptor:
 
 ```go
-func (p *goyabuProvider) Describe() source.Descriptor {
-	return source.Descriptor{
-		Kind:        source.Goyabu,
+source.Register(&idSubProvider{
+	st: scraper.SamehadakuType,
+	desc: source.Descriptor{
+		Kind:        source.Samehadaku,
 		Priority:    20,
-		Explicit:    []string{"Goyabu"},
-		Tags:        []string{"[goyabu]"},
-		URLMatchers: []string{"goyabu"},
-		ProbeURL:    "https://goyabu.io",
-	}
-}
+		Explicit:    []string{"Samehadaku"},
+		Tags:        []string{"[samehadaku]"},
+		URLMatchers: []string{"samehadaku"},
+		ProbeURL:    "https://v2.samehadaku.how",
+	},
+})
 ```
 
 | Field | Meaning | Skip when |
@@ -101,34 +108,33 @@ func (p *goyabuProvider) Describe() source.Descriptor {
 | `Tags` | lowercase substrings of `anime.Name` | results carry no tag |
 | `URLMatchers` | lowercase substrings of `anime.URL` | source uses opaque IDs |
 | `MediaTypes` | `models.MediaType` values routed here | anime-only source |
-| `DefaultDisabled` | ships off unless `GOANIME_ENABLED_SOURCES` names it | shipping live |
+| `DefaultDisabled` | ships off unless `GONIMEID_ENABLED_SOURCES` names it | shipping live |
 | `ProbeURL` | homepage; HEAD-probed on search timeout to tell "site down" from "opaque hang" | GraphQL/opaque APIs, browser-gated sources |
 
-Priorities in use: AnimeFire `10` · Goyabu `20` · SuperFlix `30` · AniDB `50` · Otakudesu `60` · Samehadaku `70`.
+Priorities in use: Otakudesu `10` · Samehadaku `20`.
 Leave gaps of 10. Priority is ignored when `anime.Source` matches an `Explicit`
 entry.
 
 `FetchStreamURL` **must** open with `util.ClearGlobalSubtitles()` and
-`util.SetGlobalAnimeSource(anime.Source)` (`source_providers.go:283–286`) — skip
-them and the previous episode's subtitles leak into this one.
+`util.SetGlobalAnimeSource(anime.Source)` — skip them and the previous
+episode's subtitles leak into this one. `idSubProvider` already does.
 
 **Capabilities** are discovered by type assertion, not by a flag. Implement only
 what is true: `HasSeasons() bool` → `source.Seasoned` · `WarmUp(ctx) error` →
-`source.BrowserGated` (called before every stream fetch; see `superFlixProvider`)
+`source.BrowserGated` (called before every stream fetch; no live source needs it)
 · `Search(ctx, query)` → `source.Searchable` · `Qualities(ctx, episodeURL)` on
 the adapter → `scraper.QualityLister` (the provider then shows a resolution
 picker when no `--quality` was given; see `pickQuality`). **A source without
 `Search` is silently excluded from the search fan-out** — it can still play by URL.
 
-**5–11.** Mechanical; follow the table. One trap: `sourceDisplayName` must return
-a string that appears in your `Descriptor.Explicit`, or a saved anime will not
-resolve back to you. (`AnimeFire` returns `"Animefire.io"`, which is why its
-`Explicit` lists both spellings.)
+**5–11.** Mechanical; follow the table. One trap: the `SourceKind` string must
+appear in your `Descriptor.Explicit`, or a saved anime will not resolve back
+to you.
 
 ### Tests
 
 One test per function, table-driven, `t.Parallel()`, `httptest.Server` for every
-HTTP mock — never real network. Copy `goyabu/client_test.go`. Add the new kind to
+HTTP mock — never real network. Copy `samehadaku/client_test.go`. Add the new kind to
 the enumerating tests: `internal/api/providers/source_providers_test.go:147`,
 `capabilities_test.go:23,39`, `internal/scraper/source_health_test.go:32,51`,
 `internal/api/enhanced_results_test.go:62`. Pin the host with a dated assertion so
@@ -145,15 +151,15 @@ Pick the weakest level that solves the problem.
 overnight:
 
 ```bash
-GOANIME_DISABLED_SOURCES="Goyabu"              # comma-separated
-GOANIME_DISABLED_SOURCES="goyabu,animefire.io" # case-insensitive, dot-forgiving
+GONIMEID_DISABLED_SOURCES="Samehadaku"            # comma-separated
+GONIMEID_DISABLED_SOURCES="samehadaku,otakudesu"  # case-insensitive
 ```
 
 Drops it from `ActiveSources()`, `Resolve`, the fan-out and the best-effort
 fallback. Each skip is logged at debug level — never silent.
 
 **Level 2 — ship it disabled.** `DefaultDisabled: true` in the descriptor; users
-opt back in with `GOANIME_ENABLED_SOURCES`. Code and tests stay, so reviving it
+opt back in with `GONIMEID_ENABLED_SOURCES`. Code and tests stay, so reviving it
 is one boolean. Use for fragile-but-not-dead sources.
 
 **Level 3 — delete.** Only when the site is gone for good. **Follow this order** —
@@ -173,7 +179,7 @@ at every step:
                             import, ScraperType const   ⚠️ iota
 10. rm -r internal/scraper/providers/<name>/
 11. tests                   remove from every enumerating test
-12. pkg/goanime/types/      only if publicly exposed (breaking change)
+12. pkg/gonimeid/types/      only if publicly exposed (breaking change)
 13. go mod tidy             if it pulled deps nobody else uses
 ```
 
@@ -214,9 +220,9 @@ gosec ./...
 go test -short -race -count=1 -covermode=atomic -coverprofile=coverage.out ./...
 go tool cover -func=coverage.out | tail -1        # must stay ≥ 66.0%
 
-go run ./cmd/goanime --source <name> "naruto"
-GOANIME_DEBUG=1 go run ./cmd/goanime "naruto"                 # your source in the fan-out
-GOANIME_DISABLED_SOURCES=<Name> go run ./cmd/goanime "naruto" # kill-switch sees it
+go run ./cmd/gonimeid --source <name> "naruto"
+GONIMEID_DEBUG=1 go run ./cmd/gonimeid "naruto"                 # your source in the fan-out
+GONIMEID_DISABLED_SOURCES=<Name> go run ./cmd/gonimeid "naruto" # kill-switch sees it
 ```
 
 ---

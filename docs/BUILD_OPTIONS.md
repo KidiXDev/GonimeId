@@ -1,6 +1,6 @@
 # Build Options
 
-GoAnime can be built with or without SQLite support for tracking anime progress.
+GonimeId can be built with or without SQLite support for tracking anime progress.
 Here's how to choose the right build for your needs:
 
 ## Standard Build (No SQLite)
@@ -70,7 +70,7 @@ It means you're using a standard build without SQLite support. You have two opti
 To check if your build supports SQLite tracking:
 
 ```bash
-./goanime --version
+./gonimeid --version
 ```
 
 SQLite-enabled builds will show "with SQLite tracking" in the version information.

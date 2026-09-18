@@ -339,15 +339,15 @@ func TestPickerModelView(t *testing.T) {
 			model := newPickerModel([]PickItem{{
 				Label:   "Season 2 with a very long label that must never overflow the terminal frame",
 				Details: "12 episodes  •  2019",
-			}}, PickOptions{WindowTitle: "GoAnime - Seasons"})
+			}}, PickOptions{WindowTitle: "GonimeId - Seasons"})
 			_, _ = model.Update(tea.WindowSizeMsg{Width: tt.width, Height: tt.height})
 
 			view := model.View()
 
 			assert.True(t, view.AltScreen)
-			assert.Equal(t, "GoAnime - Seasons", view.WindowTitle)
+			assert.Equal(t, "GonimeId - Seasons", view.WindowTitle)
 			if tt.width >= 9 {
-				assert.Contains(t, view.Content, "GOANIME")
+				assert.Contains(t, view.Content, "GONIMEID")
 			}
 			// Full-width list only — no side preview panel.
 			assert.NotContains(t, view.Content, "╭")
@@ -359,7 +359,7 @@ func TestPickerModelView(t *testing.T) {
 	t.Run("default window title", func(t *testing.T) {
 		t.Parallel()
 		model := newPickerModel([]PickItem{{Label: "A"}}, PickOptions{})
-		assert.Equal(t, "GoAnime", model.View().WindowTitle)
+		assert.Equal(t, "GonimeId", model.View().WindowTitle)
 	})
 
 	t.Run("wide layout still shows list rows only", func(t *testing.T) {

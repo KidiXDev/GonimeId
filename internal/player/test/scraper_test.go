@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/alvarorichard/Goanime/internal/player"
+	"github.com/KidiXDev/GonimeId/internal/player"
 	"github.com/stretchr/testify/assert"
 )
 

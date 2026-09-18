@@ -4,12 +4,12 @@ $ErrorActionPreference = "Stop"
 $SCRIPT_DIR = $PSScriptRoot
 $ROOT_DIR = Split-Path -Parent $SCRIPT_DIR
 $OUTPUT_DIR = Join-Path $ROOT_DIR "build"
-$BINARY_NAME = "goanime.exe"
+$BINARY_NAME = "gonimeid.exe"
 $BINARY_PATH = Join-Path $OUTPUT_DIR $BINARY_NAME
-$ZIP_NAME = "goanime-windows.zip"
+$ZIP_NAME = "gonimeid-windows.zip"
 $ZIP_PATH = Join-Path $OUTPUT_DIR $ZIP_NAME
 $CHECKSUM_FILE = "$ZIP_PATH.sha256"
-$MAIN_PACKAGE = Join-Path $ROOT_DIR "cmd\goanime"
+$MAIN_PACKAGE = Join-Path $ROOT_DIR "cmd\gonimeid"
 
 # Detecta arquitetura
 $ARCH = $env:PROCESSOR_ARCHITECTURE

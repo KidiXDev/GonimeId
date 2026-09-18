@@ -118,16 +118,6 @@ func TestMedia_OfficialTitle(t *testing.T) {
 		want string
 	}{
 		{
-			"tmdb title wins",
-			&Media{Name: "scraped", TMDBDetails: &TMDBDetails{Title: "TMDB Title", Name: "tmdb name"}},
-			"TMDB Title",
-		},
-		{
-			"tmdb name when no title",
-			&Media{Name: "scraped", TMDBDetails: &TMDBDetails{Name: "TMDB Name"}},
-			"TMDB Name",
-		},
-		{
 			"anilist english",
 			&Media{Name: "scraped", Details: AniListDetails{Title: Title{English: "Eng", Romaji: "Rom"}}},
 			"Eng",
@@ -201,13 +191,10 @@ func TestMedia_HasInteractiveEpisodeFlow(t *testing.T) {
 		mt     MediaType
 		want   bool
 	}{
-		{"sflix by source", "SFlix", MediaTypeAnime, true},
-		{"superflix by source even when tagged anime", "SuperFlix", MediaTypeAnime, true},
-		{"superflix with empty media type", "SuperFlix", "", true},
-		{"movie by media type", "AllAnime", MediaTypeMovie, true},
-		{"tv by media type", "AllAnime", MediaTypeTV, true},
-		{"regular anime source", "AllAnime", MediaTypeAnime, false},
-		{"animefire anime", "Animefire.io", MediaTypeAnime, false},
+		{"movie by media type", "Otakudesu", MediaTypeMovie, true},
+		{"tv by media type", "Otakudesu", MediaTypeTV, true},
+		{"regular anime source", "Otakudesu", MediaTypeAnime, false},
+		{"samehadaku anime", "Samehadaku", MediaTypeAnime, false},
 		{"empty everything", "", "", false},
 	}
 	for _, tt := range tests {

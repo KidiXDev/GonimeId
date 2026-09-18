@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/KidiXDev/GonimeId/internal/api"
+	"github.com/KidiXDev/GonimeId/internal/models"
 	"github.com/PuerkitoBio/goquery"
-	"github.com/alvarorichard/Goanime/internal/api"
-	"github.com/alvarorichard/Goanime/internal/models"
 	"github.com/stretchr/testify/assert"
 )
 

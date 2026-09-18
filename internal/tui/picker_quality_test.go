@@ -139,7 +139,7 @@ func TestPickerModelView_ShowsCountAndNoPanelBorder(t *testing.T) {
 		items[i] = PickItem{Label: fmt.Sprintf("Ep %02d", i+1)}
 	}
 	model := newPickerModel(items, PickOptions{
-		WindowTitle:  "GoAnime - Episodes",
+		WindowTitle:  "GonimeId - Episodes",
 		ItemSingular: "episode",
 		ItemPlural:   "episodes",
 	})

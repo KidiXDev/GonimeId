@@ -8,8 +8,8 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/KidiXDev/GonimeId/internal/util"
 	"github.com/PuerkitoBio/goquery"
-	"github.com/alvarorichard/Goanime/internal/util"
 )
 
 // ErrSourceUnavailable is returned when an upstream source is temporarily

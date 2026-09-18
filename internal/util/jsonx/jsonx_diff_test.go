@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// The structs below mirror the shapes GoAnime actually decodes: AniList's
+// The structs below mirror the shapes GonimeId actually decodes: AniList's
 // deeply nested GraphQL envelope, TVmaze's flat episode list, and the
 // provider result objects that mix numbers, nulls and free-form maps.
 

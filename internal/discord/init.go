@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alvarorichard/Goanime/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/util"
 )
 
 // Manager manages the global Discord Rich Presence state

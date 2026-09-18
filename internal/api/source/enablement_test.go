@@ -3,15 +3,15 @@ package source
 import (
 	"testing"
 
-	"github.com/alvarorichard/Goanime/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // Env var names honored by util.SourceDisabled / util.SourceForceEnabled.
 const (
-	disabledSourcesEnvForTest = "GOANIME_DISABLED_SOURCES"
-	enabledSourcesEnvForTest  = "GOANIME_ENABLED_SOURCES"
+	disabledSourcesEnvForTest = "GONIMEID_DISABLED_SOURCES"
+	enabledSourcesEnvForTest  = "GONIMEID_ENABLED_SOURCES"
 )
 
 func TestIsEnabled(t *testing.T) {
@@ -33,7 +33,7 @@ func TestIsEnabled(t *testing.T) {
 		assert.False(t, IsEnabled(d), "DefaultDisabled source is off by default")
 
 		t.Setenv(enabledSourcesEnvForTest, "Experimental")
-		assert.True(t, IsEnabled(d), "opting in via GOANIME_ENABLED_SOURCES turns it on")
+		assert.True(t, IsEnabled(d), "opting in via GONIMEID_ENABLED_SOURCES turns it on")
 	})
 
 	t.Run("explicit disable overrides opt-in", func(t *testing.T) {

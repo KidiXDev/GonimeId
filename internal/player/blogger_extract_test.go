@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alvarorichard/Goanime/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/util"
 )
 
 func TestExtractBloggerGoogleVideoURL(t *testing.T) {

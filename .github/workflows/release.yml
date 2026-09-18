@@ -17,7 +17,7 @@ concurrency:
 
 env:
   GO_VERSION: '1.27.1'
-  BINARY_NAME: goanime
+  BINARY_NAME: gonimeid
   GOFLAGS: -mod=readonly
   GOTOOLCHAIN: local
 
@@ -69,7 +69,7 @@ jobs:
       - name: Build verification
         run: |
           # Verify the project builds successfully before proceeding
-          go build -v ./cmd/goanime
+          go build -v ./cmd/gonimeid
           echo "Build verification passed"
 
       - name: Upload coverage
@@ -169,13 +169,13 @@ jobs:
           COMMIT=$(git rev-parse --short HEAD)
           
           LDFLAGS="-s -w"
-          LDFLAGS="${LDFLAGS} -X github.com/alvarorichard/Goanime/internal/version.Version=${VERSION}"
-          LDFLAGS="${LDFLAGS} -X github.com/alvarorichard/Goanime/internal/version.BuildTime=${BUILD_TIME}"
-          LDFLAGS="${LDFLAGS} -X github.com/alvarorichard/Goanime/internal/version.Commit=${COMMIT}"
+          LDFLAGS="${LDFLAGS} -X github.com/KidiXDev/GonimeId/internal/version.Version=${VERSION}"
+          LDFLAGS="${LDFLAGS} -X github.com/KidiXDev/GonimeId/internal/version.BuildTime=${BUILD_TIME}"
+          LDFLAGS="${LDFLAGS} -X github.com/KidiXDev/GonimeId/internal/version.Commit=${COMMIT}"
           
           OUTPUT_NAME="${{ env.BINARY_NAME }}-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}"
           
-          go build -ldflags "${LDFLAGS}" -o "dist/${OUTPUT_NAME}" ./cmd/goanime
+          go build -ldflags "${LDFLAGS}" -o "dist/${OUTPUT_NAME}" ./cmd/gonimeid
           
           echo "Built ${OUTPUT_NAME} with SQLite support"
 
@@ -191,14 +191,14 @@ jobs:
           $COMMIT = git rev-parse --short HEAD
           
           $LDFLAGS = "-s -w"
-          $LDFLAGS = "$LDFLAGS -X github.com/alvarorichard/Goanime/internal/version.Version=$VERSION"
-          $LDFLAGS = "$LDFLAGS -X github.com/alvarorichard/Goanime/internal/version.BuildTime=$BUILD_TIME"
-          $LDFLAGS = "$LDFLAGS -X github.com/alvarorichard/Goanime/internal/version.Commit=$COMMIT"
+          $LDFLAGS = "$LDFLAGS -X github.com/KidiXDev/GonimeId/internal/version.Version=$VERSION"
+          $LDFLAGS = "$LDFLAGS -X github.com/KidiXDev/GonimeId/internal/version.BuildTime=$BUILD_TIME"
+          $LDFLAGS = "$LDFLAGS -X github.com/KidiXDev/GonimeId/internal/version.Commit=$COMMIT"
           
           $OUTPUT_NAME = "${{ env.BINARY_NAME }}-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}"
           
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-          go build -ldflags "$LDFLAGS" -o "dist/$OUTPUT_NAME" ./cmd/goanime
+          go build -ldflags "$LDFLAGS" -o "dist/$OUTPUT_NAME" ./cmd/gonimeid
           
           Write-Host "Built $OUTPUT_NAME with SQLite support"
 
@@ -290,7 +290,7 @@ jobs:
       - name: Rename binary for installer
         shell: bash
         run: |
-          mv build/staging/goanime-windows-amd64.exe build/staging/goanime.exe
+          mv build/staging/gonimeid-windows-amd64.exe build/staging/gonimeid.exe
 
       - name: Download MPV for Windows
         shell: pwsh
@@ -302,7 +302,7 @@ jobs:
           
           # Get latest MPV release from GitHub (shinchiro builds - official recommended)
           Write-Host "Fetching latest MPV release..."
-          $headers = @{ "User-Agent" = "GoAnime-CI" }
+          $headers = @{ "User-Agent" = "GonimeId-CI" }
           if ($env:GITHUB_TOKEN) {
             $headers["Authorization"] = "Bearer $env:GITHUB_TOKEN"
           }
@@ -321,7 +321,7 @@ jobs:
           
           Write-Host "Downloading MPV from: $mpvUrl"
           Write-Host "Version: $($releases.tag_name)"
-          Invoke-WebRequest -Uri $mpvUrl -OutFile $mpvArchive -Headers @{ "Accept" = "application/octet-stream"; "User-Agent" = "GoAnime-CI" }
+          Invoke-WebRequest -Uri $mpvUrl -OutFile $mpvArchive -Headers @{ "Accept" = "application/octet-stream"; "User-Agent" = "GonimeId-CI" }
           
           # Verify download
           if (-not (Test-Path $mpvArchive) -or (Get-Item $mpvArchive).Length -lt 1000000) {
@@ -387,7 +387,7 @@ jobs:
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" build/install.iss
           
           # Check if installer was created
-          $installerPath = "dist/GoAnime-Installer-${{ steps.version.outputs.VERSION_NUMBER }}.exe"
+          $installerPath = "dist/GonimeId-Installer-${{ steps.version.outputs.VERSION_NUMBER }}.exe"
           if (Test-Path $installerPath) {
             Write-Host "Installer created successfully: $installerPath"
             Get-Item $installerPath | Select-Object Name, Length
@@ -400,7 +400,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: windows-installer
-          path: dist/GoAnime-Installer-*.exe
+          path: dist/GonimeId-Installer-*.exe
           retention-days: 1
 
   # =============================================================================
@@ -545,16 +545,16 @@ jobs:
           echo "#### Linux / macOS" >> RELEASE_NOTES.md
           echo '```bash' >> RELEASE_NOTES.md
           echo "# Download the binary for your platform" >> RELEASE_NOTES.md
-          echo "curl -LO https://github.com/alvarorichard/Goanime/releases/download/${VERSION}/goanime-linux-amd64.tar.gz" >> RELEASE_NOTES.md
+          echo "curl -LO https://github.com/KidiXDev/GonimeId/releases/download/${VERSION}/gonimeid-linux-amd64.tar.gz" >> RELEASE_NOTES.md
           echo "" >> RELEASE_NOTES.md
           echo "# Extract and install" >> RELEASE_NOTES.md
-          echo "tar -xzf goanime-linux-amd64.tar.gz" >> RELEASE_NOTES.md
-          echo "chmod +x goanime-linux-amd64" >> RELEASE_NOTES.md
-          echo "sudo mv goanime-linux-amd64 /usr/local/bin/goanime" >> RELEASE_NOTES.md
+          echo "tar -xzf gonimeid-linux-amd64.tar.gz" >> RELEASE_NOTES.md
+          echo "chmod +x gonimeid-linux-amd64" >> RELEASE_NOTES.md
+          echo "sudo mv gonimeid-linux-amd64 /usr/local/bin/gonimeid" >> RELEASE_NOTES.md
           echo '```' >> RELEASE_NOTES.md
           echo "" >> RELEASE_NOTES.md
           echo "#### Windows" >> RELEASE_NOTES.md
-          echo "**Recommended:** Download and run the \`GoAnime-Installer-${VERSION#v}.exe\` for automatic setup with MPV included." >> RELEASE_NOTES.md
+          echo "**Recommended:** Download and run the \`GonimeId-Installer-${VERSION#v}.exe\` for automatic setup with MPV included." >> RELEASE_NOTES.md
           echo "" >> RELEASE_NOTES.md
           echo "Or download the portable \`.zip\` file for your architecture and extract it." >> RELEASE_NOTES.md
           echo "" >> RELEASE_NOTES.md
@@ -569,12 +569,12 @@ jobs:
           echo "" >> RELEASE_NOTES.md
           echo "| OS | Architecture | Binary |" >> RELEASE_NOTES.md
           echo "|---|---|---|" >> RELEASE_NOTES.md
-          echo "| Linux | x86_64 | \`goanime-linux-amd64\` |" >> RELEASE_NOTES.md
-          echo "| Linux | ARM64 | \`goanime-linux-arm64\` |" >> RELEASE_NOTES.md
-          echo "| macOS | Universal (Intel x86_64 + Apple Silicon ARM64) | \`goanime-darwin-universal\` |" >> RELEASE_NOTES.md
-          echo "| Windows | Installer | \`GoAnime-Installer-\${VERSION#v}.exe\` (Recommended) |" >> RELEASE_NOTES.md
-          echo "| Windows | x86_64 | \`goanime-windows-amd64.exe\` |" >> RELEASE_NOTES.md
-          echo "| Arch Linux | x86_64 | \`yay -S goanime\` (AUR) |" >> RELEASE_NOTES.md
+          echo "| Linux | x86_64 | \`gonimeid-linux-amd64\` |" >> RELEASE_NOTES.md
+          echo "| Linux | ARM64 | \`gonimeid-linux-arm64\` |" >> RELEASE_NOTES.md
+          echo "| macOS | Universal (Intel x86_64 + Apple Silicon ARM64) | \`gonimeid-darwin-universal\` |" >> RELEASE_NOTES.md
+          echo "| Windows | Installer | \`GonimeId-Installer-\${VERSION#v}.exe\` (Recommended) |" >> RELEASE_NOTES.md
+          echo "| Windows | x86_64 | \`gonimeid-windows-amd64.exe\` |" >> RELEASE_NOTES.md
+          echo "| Arch Linux | x86_64 | \`yay -S gonimeid\` (AUR) |" >> RELEASE_NOTES.md
           echo "" >> RELEASE_NOTES.md
           echo "All binaries are built with SQLite tracking support enabled." >> RELEASE_NOTES.md
           
@@ -583,19 +583,19 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          name: GoAnime ${{ steps.version.outputs.VERSION }}
+          name: GonimeId ${{ steps.version.outputs.VERSION }}
           body_path: RELEASE_NOTES.md
           draft: false
           prerelease: ${{ steps.version.outputs.PRERELEASE }}
           files: |
-            release/goanime-linux-amd64
-            release/goanime-linux-arm64
-            release/goanime-darwin-universal
-            release/goanime-linux-amd64.tar.gz
-            release/goanime-linux-arm64.tar.gz
-            release/goanime-darwin-universal.tar.gz
-            release/goanime-windows-amd64.zip
-            release/GoAnime-Installer-*.exe
+            release/gonimeid-linux-amd64
+            release/gonimeid-linux-arm64
+            release/gonimeid-darwin-universal
+            release/gonimeid-linux-amd64.tar.gz
+            release/gonimeid-linux-arm64.tar.gz
+            release/gonimeid-darwin-universal.tar.gz
+            release/gonimeid-windows-amd64.zip
+            release/GonimeId-Installer-*.exe
             release/checksums-sha256.txt
             release/checksums-sha512.txt
           fail_on_unmatched_files: false
@@ -651,12 +651,12 @@ jobs:
       - name: Update PKGBUILD version
         if: steps.check-secrets.outputs.has_secrets == 'true'
         run: |
-          cd aur/goanime
+          cd aur/gonimeid
           sed -i "s/pkgver=.*/pkgver=${{ steps.version.outputs.VERSION_NUMBER }}/" PKGBUILD
           sed -i "s/pkgrel=.*/pkgrel=1/" PKGBUILD
           
           # Update source URL in PKGBUILD
-          sed -i "s|goanime-[0-9.]*::|goanime-${{ steps.version.outputs.VERSION_NUMBER }}::|" PKGBUILD
+          sed -i "s|gonimeid-[0-9.]*::|gonimeid-${{ steps.version.outputs.VERSION_NUMBER }}::|" PKGBUILD
           
           cat PKGBUILD
 
@@ -665,14 +665,14 @@ jobs:
         uses: docker://archlinux:latest
         with:
           entrypoint: bash
-          args: -c "pacman -Sy --noconfirm pacman-contrib base-devel && useradd -m builder && chown -R builder:builder /github/workspace && su builder -c 'cd /github/workspace/aur/goanime && makepkg --printsrcinfo > .SRCINFO && cat .SRCINFO'"
+          args: -c "pacman -Sy --noconfirm pacman-contrib base-devel && useradd -m builder && chown -R builder:builder /github/workspace && su builder -c 'cd /github/workspace/aur/gonimeid && makepkg --printsrcinfo > .SRCINFO && cat .SRCINFO'"
 
       - name: Publish to AUR
         if: steps.check-secrets.outputs.has_secrets == 'true'
         uses: KSXGitHub/github-actions-deploy-aur@v4.2.0
         with:
-          pkgname: goanime
-          pkgbuild: ./aur/goanime/PKGBUILD
+          pkgname: gonimeid
+          pkgbuild: ./aur/gonimeid/PKGBUILD
           commit_username: ${{ secrets.AUR_USERNAME }}
           commit_email: ${{ secrets.AUR_EMAIL }}
           ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
@@ -684,6 +684,6 @@ jobs:
         run: |
           echo "## AUR Package Updated" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- Package: goanime" >> $GITHUB_STEP_SUMMARY
+          echo "- Package: gonimeid" >> $GITHUB_STEP_SUMMARY
           echo "- Version: ${{ steps.version.outputs.VERSION_NUMBER }}" >> $GITHUB_STEP_SUMMARY
-          echo "- AUR URL: https://aur.archlinux.org/packages/goanime" >> $GITHUB_STEP_SUMMARY
+          echo "- AUR URL: https://aur.archlinux.org/packages/gonimeid" >> $GITHUB_STEP_SUMMARY

@@ -5,20 +5,20 @@ set -e
 
 # Variables
 OUTPUT_DIR="../build"  # Adjusted to place the binaries in the build directory
-BINARY_NAME_AMD64="goanime-darwin-amd64"
-BINARY_NAME_ARM64="goanime-darwin-arm64"
-BINARY_NAME_UNIVERSAL="goanime-darwin-universal"
-BINARY_NAME_UNIVERSAL_GENERIC="goanime-darwin"
+BINARY_NAME_AMD64="gonimeid-darwin-amd64"
+BINARY_NAME_ARM64="gonimeid-darwin-arm64"
+BINARY_NAME_UNIVERSAL="gonimeid-darwin-universal"
+BINARY_NAME_UNIVERSAL_GENERIC="gonimeid-darwin"
 BINARY_PATH_AMD64="$OUTPUT_DIR/$BINARY_NAME_AMD64"
 BINARY_PATH_ARM64="$OUTPUT_DIR/$BINARY_NAME_ARM64"
 BINARY_PATH_UNIVERSAL="$OUTPUT_DIR/$BINARY_NAME_UNIVERSAL"
 BINARY_PATH_UNIVERSAL_GENERIC="$OUTPUT_DIR/$BINARY_NAME_UNIVERSAL_GENERIC"
-MAIN_PACKAGE="../cmd/goanime"
+MAIN_PACKAGE="../cmd/gonimeid"
 
 # Create the output directory if it doesn't exist
 mkdir -p "$OUTPUT_DIR"
 
-echo "Building goanime binaries for macOS..."
+echo "Building gonimeid binaries for macOS..."
 
 # Build for Intel (amd64)
 echo "Building for Intel (amd64)..."
@@ -126,11 +126,11 @@ fi
 
 echo ""
 echo "GitHub Release Assets:"
-echo "- goanime-darwin-amd64 (Intel macOS)"
-echo "- goanime-darwin-arm64 (Apple Silicon macOS)"
+echo "- gonimeid-darwin-amd64 (Intel macOS)"
+echo "- gonimeid-darwin-arm64 (Apple Silicon macOS)"
 if [ -f "$BINARY_PATH_UNIVERSAL" ]; then
-    echo "- goanime-darwin-universal (Universal macOS - explicit)"
+    echo "- gonimeid-darwin-universal (Universal macOS - explicit)"
 fi
 if [ -f "$BINARY_PATH_UNIVERSAL_GENERIC" ]; then
-    echo "- goanime-darwin (Universal macOS - fallback for updater)"
+    echo "- gonimeid-darwin (Universal macOS - fallback for updater)"
 fi

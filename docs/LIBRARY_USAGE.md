@@ -1,8 +1,8 @@
-# GoAnime Library Integration Guide
+# GonimeId Library Integration Guide
 
 ## 📦 O que foi criado
 
-Foi criada uma estrutura completa em `pkg/goanime` que expõe as funcionalidades de scraping e busca do GoAnime como uma biblioteca pública para ser usada em outros projetos Go.
+Foi criada uma estrutura completa em `pkg/gonimeid` que expõe as funcionalidades de scraping e busca do GonimeId como uma biblioteca pública para ser usada em outros projetos Go.
 
 ## 🎯 Estrutura Criada
 
@@ -10,7 +10,7 @@ Foi criada uma estrutura completa em `pkg/goanime` que expõe as funcionalidades
 pkg/
 ├── README.md                                 # Documentação principal da biblioteca
 ├── PACKAGE_INFO.md                          # Informações sobre a estrutura do pacote
-└── goanime/                                 # Pacote principal
+└── gonimeid/                                 # Pacote principal
     ├── client.go                            # Cliente principal da API
     ├── client_test.go                       # Testes unitários e de integração
     ├── doc.go                               # Documentação do pacote
@@ -30,7 +30,7 @@ pkg/
 ### 1. Instalação
 
 ```bash
-go get github.com/alvarorichard/Goanime
+go get github.com/KidiXDev/GonimeId
 ```
 
 ### 2. Uso Básico
@@ -41,12 +41,12 @@ package main
 import (
     "fmt"
     "log"
-    "github.com/alvarorichard/Goanime/pkg/goanime"
+    "github.com/KidiXDev/GonimeId/pkg/gonimeid"
 )
 
 func main() {
     // Criar cliente
-    client := goanime.NewClient()
+    client := gonimeid.NewClient()
     
     // Buscar anime
     results, err := client.SearchAnime("Naruto", nil)
@@ -64,12 +64,12 @@ func main() {
 ### 3. Busca em Fonte Específica
 
 ```go
-import "github.com/alvarorichard/Goanime/pkg/goanime/types"
+import "github.com/KidiXDev/GonimeId/pkg/gonimeid/types"
 
-client := goanime.NewClient()
+client := gonimeid.NewClient()
 
-// Buscar apenas no AnimeFire
-source := types.SourceAnimeFire
+// Search one source only
+source := types.SourceOtakudesu
 results, err := client.SearchAnime("One Piece", &source)
 ```
 
@@ -132,19 +132,20 @@ for key, value := range headers {
 
 #### `types.Source`
 
-- `SourceAnimeFire` - Fonte AnimeFire
+- `SourceOtakudesu` - Otakudesu
+- `SourceSamehadaku` - Samehadaku
 
 ## 🧪 Testes
 
 ```bash
 # Executar todos os testes
-go test ./pkg/goanime/...
+go test ./pkg/gonimeid/...
 
 # Apenas testes unitários (sem integração)
-go test -short ./pkg/goanime/...
+go test -short ./pkg/gonimeid/...
 
 # Com verbose
-go test -v ./pkg/goanime/...
+go test -v ./pkg/gonimeid/...
 ```
 
 **Resultado:** ✅ Todos os testes passando
@@ -153,16 +154,16 @@ go test -v ./pkg/goanime/...
 
 ```bash
 # Exemplo de busca
-go build -o search ./pkg/goanime/examples/search/
+go build -o search ./pkg/gonimeid/examples/search/
 
 # Exemplo de episódios
-go build -o episodes ./pkg/goanime/examples/episodes/
+go build -o episodes ./pkg/gonimeid/examples/episodes/
 
 # Exemplo de stream
-go build -o stream ./pkg/goanime/examples/stream/
+go build -o stream ./pkg/gonimeid/examples/stream/
 
 # Exemplo de fonte específica
-go build -o source ./pkg/goanime/examples/source_specific/
+go build -o source ./pkg/gonimeid/examples/source_specific/
 ```
 
 ## ✅ Verificações
@@ -177,8 +178,8 @@ go build -o source ./pkg/goanime/examples/source_specific/
 ## 📖 Documentação
 
 1. **[pkg/README.md](pkg/README.md)** - Visão geral e início rápido
-2. **[pkg/goanime/README.md](pkg/goanime/README.md)** - Documentação detalhada da API
-3. **[pkg/goanime/examples/](pkg/goanime/examples/)** - Exemplos práticos de uso
+2. **[pkg/gonimeid/README.md](pkg/gonimeid/README.md)** - Documentação detalhada da API
+3. **[pkg/gonimeid/examples/](pkg/gonimeid/examples/)** - Exemplos práticos de uso
 4. **[pkg/PACKAGE_INFO.md](pkg/PACKAGE_INFO.md)** - Informações sobre o pacote
 
 ## 🎓 Exemplos de Integração
@@ -254,10 +255,10 @@ MIT License - veja [LICENSE](../LICENSE)
 
 ## 🔗 Links Úteis
 
-- Repositório principal: <https://github.com/alvarorichard/GoAnime>
-- Documentação completa: [pkg/goanime/README.md](pkg/goanime/README.md)
-- Exemplos: [pkg/goanime/examples/](pkg/goanime/examples/)
-- Issues: <https://github.com/alvarorichard/GoAnime/issues>
+- Repositório principal: <https://github.com/KidiXDev/GonimeId>
+- Documentação completa: [pkg/gonimeid/README.md](pkg/gonimeid/README.md)
+- Exemplos: [pkg/gonimeid/examples/](pkg/gonimeid/examples/)
+- Issues: <https://github.com/KidiXDev/GonimeId/issues>
 
 ---
 

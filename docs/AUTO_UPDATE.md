@@ -1,6 +1,6 @@
 # Auto-Update Functionality
 
-GoAnime now includes built-in auto-update functionality that allows users to
+GonimeId now includes built-in auto-update functionality that allows users to
 update to the latest version without manually downloading and installing.
 
 ## Features
@@ -18,7 +18,7 @@ update to the latest version without manually downloading and installing.
 ### Check for Updates
 
 ```bash
-goanime --update
+gonimeid --update
 ```
 
 This command will:
@@ -36,7 +36,7 @@ When an update is available, you'll see a beautiful menu like this:
 
 ```text
 ┃ Update Available!
-┃ A new version of GoAnime is available.
+┃ A new version of GonimeId is available.
 ┃
 ┃ Current: v1.0.0
 ┃ Latest:  v1.1.0 (4.0 MB)
@@ -115,41 +115,41 @@ If automatic update fails, the system provides:
 ### Successful Update
 
 ```bash
-$ goanime --update
-INFO  GoAnime  : Checking for updates...
-INFO  GoAnime  : Update available: v1.0.0 → v1.1.0
+$ gonimeid --update
+INFO  GonimeId  : Checking for updates...
+INFO  GonimeId  : Update available: v1.0.0 → v1.1.0
 # Interactive menu appears
-INFO  GoAnime  : Downloading GoAnime v1.1.0...
-INFO  GoAnime  : Downloading update...
-INFO  GoAnime  : Successfully updated to GoAnime v1.1.0!
-INFO  GoAnime  : The update has been installed. Please restart GoAnime to use
+INFO  GonimeId  : Downloading GonimeId v1.1.0...
+INFO  GonimeId  : Downloading update...
+INFO  GonimeId  : Successfully updated to GonimeId v1.1.0!
+INFO  GonimeId  : The update has been installed. Please restart GonimeId to use
                    the new version.
 ```
 
 ### No Updates Available
 
 ```bash
-$ goanime --update
-INFO  GoAnime  : Checking for updates...
-INFO  GoAnime  : You're already running the latest version of GoAnime (v1.1.0)!
+$ gonimeid --update
+INFO  GonimeId  : Checking for updates...
+INFO  GonimeId  : You're already running the latest version of GonimeId (v1.1.0)!
 ```
 
 ### Update Declined
 
 ```bash
-$ goanime --update
-INFO  GoAnime  : Checking for updates...
-INFO  GoAnime  : Update available: v1.0.0 → v1.1.0
+$ gonimeid --update
+INFO  GonimeId  : Checking for updates...
+INFO  GonimeId  : Update available: v1.0.0 → v1.1.0
 # User selects "No, maybe later"
-INFO  GoAnime  : Update skipped. You can update later by running: goanime --update
+INFO  GonimeId  : Update skipped. You can update later by running: gonimeid --update
 ```
 
 ## Integration with Help System
 
-The auto-update feature is fully integrated with GoAnime's help system:
+The auto-update feature is fully integrated with GonimeId's help system:
 
 ```bash
-goanime --help
+gonimeid --help
 ```
 
 Shows the `--update` flag in the options section with a clear description.

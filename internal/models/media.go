@@ -23,7 +23,7 @@ type Media struct {
 	URL       string
 	ImageURL  string
 	Episodes  []Episode
-	Source    string    // Identifies the source (AllAnime, AnimeFire, FlixHQ, etc.)
+	Source    string    // Identifies the source (Otakudesu, Samehadaku)
 	MediaType MediaType // Type of media (anime, movie, tv)
 	Year      string    // Release year
 	Quality   string    // Video quality (if available)
@@ -33,15 +33,14 @@ type Media struct {
 	MalID     int
 	Details   AniListDetails
 
-	// Movie/TV-specific fields (TMDB/OMDb)
-	TMDBID        int          // TMDB ID
-	IMDBID        string       // IMDB ID
-	TMDBDetails   *TMDBDetails // Detailed TMDB information
-	Rating        float64      // Rating (0-10)
-	Overview      string       // Description/synopsis
-	Genres        []string     // Genre list
-	Runtime       int          // Runtime in minutes (for movies)
-	CurrentSeason int          // Currently selected season number (for TV shows)
+	// External IDs for Plex/Jellyfin-style folder naming
+	TMDBID        int     // TMDB ID
+	IMDBID        string  // IMDB ID
+	Rating        float64 // Rating (0-10)
+	Overview      string  // Description/synopsis
+	Genres        []string
+	Runtime       int // Runtime in minutes (for movies)
+	CurrentSeason int // Currently selected season number (for TV shows)
 }
 
 // Season represents a TV show season
@@ -114,15 +113,10 @@ func (m *Media) IsMovieOrTV() bool {
 }
 
 // HasInteractiveEpisodeFlow reports whether fetching this title's episodes may
-// open its own terminal UI (the season-selection fuzzyfinder), meaning callers
-// MUST NOT run a spinner or any other TUI concurrently with the fetch — two
-// programs writing to the terminal at once eat each other's output and corrupt
-// terminal state. SuperFlix/SFlix are matched by SOURCE, not just media type:
-// their catalogs tag western animation (e.g. "Os Simpsons") as anime, which
-// would otherwise slip past the movie/TV check.
+// open its own terminal UI (a season picker), meaning callers MUST NOT run a
+// spinner or any other TUI concurrently with the fetch.
 func (m *Media) HasInteractiveEpisodeFlow() bool {
-	return m.Source == "SFlix" || m.Source == "SuperFlix" ||
-		m.MediaType == MediaTypeMovie || m.MediaType == MediaTypeTV
+	return m.MediaType == MediaTypeMovie || m.MediaType == MediaTypeTV
 }
 
 // GetDisplayName returns a formatted display name with year and type indicator
@@ -135,20 +129,9 @@ func (m *Media) GetDisplayName() string {
 }
 
 // OfficialTitle returns the official title from metadata databases.
-// Priority: TMDB Title/Name > AniList English > AniList Romaji > scraped Name.
-// This is used for Plex/Jellyfin-compatible folder naming so that media
-// servers can properly match content (e.g. "Two and a Half Men" instead
-// of the localized "Dois Homens e Meio").
+// Priority: AniList English > AniList Romaji > scraped Name. This is used for
+// Plex/Jellyfin-compatible folder naming so media servers can match content.
 func (m *Media) OfficialTitle() string {
-	// TMDB: movies use Title, TV shows use Name
-	if m.TMDBDetails != nil {
-		if m.TMDBDetails.Title != "" {
-			return m.TMDBDetails.Title
-		}
-		if m.TMDBDetails.Name != "" {
-			return m.TMDBDetails.Name
-		}
-	}
 	// AniList: prefer English, fall back to Romaji
 	if m.Details.Title.English != "" {
 		return m.Details.Title.English

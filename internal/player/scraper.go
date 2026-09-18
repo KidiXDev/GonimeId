@@ -17,19 +17,19 @@ import (
 	"sync"
 	"time"
 
+	"github.com/KidiXDev/GonimeId/internal/api"
+	"github.com/KidiXDev/GonimeId/internal/scraper/netx"
 	"github.com/PuerkitoBio/goquery"
-	"github.com/alvarorichard/Goanime/internal/api"
-	"github.com/alvarorichard/Goanime/internal/scraper/netx"
 
 	// Blank import: the providers package self-registers every live Source in
 	// its init(). Without it the registry is empty and dispatch resolves
 	// nothing. Consolidated into a single wiring file in a later phase (S3).
-	_ "github.com/alvarorichard/Goanime/internal/api/providers"
-	"github.com/alvarorichard/Goanime/internal/api/source"
-	"github.com/alvarorichard/Goanime/internal/models"
-	"github.com/alvarorichard/Goanime/internal/tui"
-	"github.com/alvarorichard/Goanime/internal/util"
-	"github.com/alvarorichard/Goanime/internal/util/jsonx"
+	_ "github.com/KidiXDev/GonimeId/internal/api/providers"
+	"github.com/KidiXDev/GonimeId/internal/api/source"
+	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/tui"
+	"github.com/KidiXDev/GonimeId/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/util/jsonx"
 	g "github.com/enetx/g"
 	"github.com/enetx/surf"
 )
@@ -229,9 +229,18 @@ func episodeDisplayTitle(ep models.Episode) string {
 	return ep.Title.English
 }
 
-// episodeLabel builds the picker row label: "Episode 12 — Title".
+// genericEpisodeTitleRe matches a source title that only restates the anime
+// and the episode number ("Naruto Kecil Episode 12", "Boruto Episode 12").
+var genericEpisodeTitleRe = regexp.MustCompile(`(?i)\bepisode\s+(\d+)\s*$`)
+
+// episodeLabel builds the picker row label: "Episode 12", or "12 — Title" when
+// the source gives a real episode title. Indonesian sources title every
+// episode "<Anime> Episode N", which repeated the anime name on every row.
 func episodeLabel(ep models.Episode) string {
 	title := episodeDisplayTitle(ep)
+	if m := genericEpisodeTitleRe.FindStringSubmatch(title); m != nil && m[1] == strings.TrimSpace(ep.Number) {
+		return "Episode " + ep.Number
+	}
 	if title == "" {
 		return ep.Number
 	}
@@ -285,8 +294,8 @@ func selectEpisodeWithPicker(pick episodePickFunc, episodes []models.Episode) (e
 
 	util.Debugf("[TRACE] SelectEpisodeWithFuzzyFinder: opening picker with %d episodes", len(episodes))
 	idx, err := pick(episodePickItems(episodes), tui.PickOptions{
-		Breadcrumb:   "Search > Episodes",
-		WindowTitle:  "GoAnime - Episodes",
+		Breadcrumb:   "Results › Episodes",
+		WindowTitle:  "GonimeId - Episodes",
 		ItemSingular: "episode",
 		ItemPlural:   "episodes",
 	})
@@ -442,18 +451,10 @@ func GetVideoURLForEpisodeEnhanced(ctx context.Context, episode *models.Episode,
 			util.Debug("Movie/TV stream URL failed", "source", sourceLabel, "error", err)
 			return "", fmt.Errorf("failed to get %s stream URL: %w", sourceLabel, err)
 		}
-		switch resolved.Kind {
-		case source.AniDB, source.Otakudesu, source.Samehadaku:
-			// Registry-backed source: surface the real error instead of falling
-			// back to the legacy scraper, which knows nothing about it. (This
-			// guard used to name AllAnime, which held the same position.)
-			if errors.Is(err, tui.ErrPickBack) || errors.Is(err, tui.ErrPickCancelled) {
-				return "", ErrBackToEpisodeSelection // Esc in the quality picker
-			}
-			return "", fmt.Errorf("failed to get %s stream URL: %w", resolved.Kind, err)
+		if errors.Is(err, tui.ErrPickBack) || errors.Is(err, tui.ErrPickCancelled) {
+			return "", ErrBackToEpisodeSelection // Esc in the quality picker
 		}
-		// Legacy silent fallback for the remaining sources — removed in Phase 2.
-		return GetVideoURLForEpisode(episode.URL)
+		return "", fmt.Errorf("failed to get %s stream URL: %w", resolved.Kind, err)
 	}
 
 	// Movie/TV URLs are returned as-is, exactly as the legacy chain did.
@@ -1379,7 +1380,7 @@ func extractActualVideoURL(videoSrc string) (string, error) {
 
 			qIdx, err := tui.PickLabels(qualityLabels, tui.PickOptions{
 				Breadcrumb:   "Playback > Quality",
-				WindowTitle:  "GoAnime - Quality",
+				WindowTitle:  "GonimeId - Quality",
 				ItemSingular: "quality",
 				ItemPlural:   "qualities",
 			})

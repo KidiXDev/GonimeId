@@ -6,13 +6,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/alvarorichard/Goanime/internal/api/providers"
-	"github.com/alvarorichard/Goanime/internal/api/providers/metadata"
-	"github.com/alvarorichard/Goanime/internal/appflow"
-	"github.com/alvarorichard/Goanime/internal/downloader"
-	"github.com/alvarorichard/Goanime/internal/models"
-	"github.com/alvarorichard/Goanime/internal/player"
-	"github.com/alvarorichard/Goanime/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/api/providers"
+	"github.com/KidiXDev/GonimeId/internal/api/providers/metadata"
+	"github.com/KidiXDev/GonimeId/internal/appflow"
+	"github.com/KidiXDev/GonimeId/internal/downloader"
+	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/player"
+	"github.com/KidiXDev/GonimeId/internal/util"
 )
 
 // workflowSearchFn is the anime search function used by HandleDownloadRequest.
@@ -121,12 +121,4 @@ func HandleDownloadRequest(request *util.DownloadRequest) error {
 	}
 	dl := downloader.NewEpisodeDownloaderWithAnime(episodes, anime.URL, anime)
 	return dl.DownloadSingleEpisode(request.EpisodeNum)
-}
-
-// HandleMovieDownloadRequest is a stub kept for callers — movie/TV scrapers
-// have all been removed (SFlix/FlixHQ deleted because they went offline).
-// Always returns an error.
-func HandleMovieDownloadRequest(request *util.DownloadRequest) error {
-	_ = request
-	return fmt.Errorf("movie/TV download is no longer supported: scrapers have been removed")
 }

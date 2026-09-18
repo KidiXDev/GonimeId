@@ -1,7 +1,7 @@
 # Developer's Guide
 
-Welcome to the GoAnime development guide! This document outlines the development
-workflow, coding standards, and best practices for contributing to the GoAnime
+Welcome to the GonimeId development guide! This document outlines the development
+workflow, coding standards, and best practices for contributing to the GonimeId
 project.
 
 ## Table of Contents
@@ -43,8 +43,8 @@ project.
 
 ```bash
 # Clone the repository
-git clone https://github.com/alvarorichard/GoAnime.git
-cd GoAnime
+git clone https://github.com/KidiXDev/GonimeId.git
+cd GonimeId
 
 # Switch to dev branch
 git checkout dev
@@ -140,7 +140,7 @@ if exists := checkLocalCache(animeID); exists {
 ### Example Code Style
 
 ```go
-// Package player provides video playback functionality for GoAnime.
+// Package player provides video playback functionality for GonimeId.
 package player
 
 import (
@@ -340,7 +340,7 @@ breaker and the kill-switch all read that data — **there is no central `switch
 to update in the dispatch path**.
 
 **Procedure, touchpoint table and checklists:
-[`ADDING_A_SOURCE.md`](ADDING_A_SOURCE.md).** Read `Goyabu` as the reference
+[`ADDING_A_SOURCE.md`](ADDING_A_SOURCE.md).** Read `Samehadaku` as the reference
 implementation — it is the simplest complete source in the tree.
 
 ### The layers
@@ -370,10 +370,10 @@ excluded from the search fan-out).
 
 ### Removing — pick the weakest level that works
 
-1. **Runtime, no rebuild:** `GOANIME_DISABLED_SOURCES="Goyabu"` — the correct
+1. **Runtime, no rebuild:** `GONIMEID_DISABLED_SOURCES="Samehadaku"` — the correct
    first response to a source that broke overnight.
 2. **Ship disabled:** `DefaultDisabled: true` in the descriptor; users opt in
-   with `GOANIME_ENABLED_SOURCES`. Code and tests stay.
+   with `GONIMEID_ENABLED_SOURCES`. Code and tests stay.
 3. **Permanent delete:** follow the ordered 13-step checklist in
    [`ADDING_A_SOURCE.md`](ADDING_A_SOURCE.md#removing) — it removes references
    before the things they reference, so the build stays green at every step.
@@ -389,10 +389,10 @@ After either operation, run the mandatory gate from
 
 ```bash
 # Build for current platform
-go build -o bin/goanime cmd/goanime/main.go
+go build -o bin/gonimeid cmd/gonimeid/main.go
 
 # Run the application
-./bin/goanime
+./bin/gonimeid
 ```
 
 ### Cross-Platform Builds
@@ -471,7 +471,7 @@ docs(readme): update installation instructions
 
 ### Project Structure
 
-Understanding the GoAnime project structure will help you navigate and contribute
+Understanding the GonimeId project structure will help you navigate and contribute
 effectively:
 
 **Key Directories Explained:**

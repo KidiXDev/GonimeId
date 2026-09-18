@@ -9,12 +9,9 @@ import (
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
-	"github.com/alvarorichard/Goanime/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/models"
 	"github.com/charmbracelet/x/ansi"
 )
-
-const wideResultsBreakpoint = 100
 
 var (
 	// ErrSelectionBack means the user requested the previous screen.
@@ -60,8 +57,8 @@ func (i animeResultItem) Description() string {
 	if i.anime == nil {
 		return "Information unavailable"
 	}
-	parts := make([]string, 0, 4)
-	for _, value := range []string{i.anime.Source, i.anime.Year, string(i.anime.MediaType), i.anime.Quality} {
+	parts := make([]string, 0, 2)
+	for _, value := range []string{i.anime.Source, i.anime.Year} {
 		if value = singleLine(value); value != "" {
 			parts = append(parts, value)
 		}
@@ -102,7 +99,7 @@ type animeResultsModel struct {
 // newAnimeResultsModel creates the styled, filterable anime result screen.
 func newAnimeResultsModel(animes []*models.Anime) *animeResultsModel {
 	theme := NewTheme(true)
-	shell := NewShell(&theme, "Search > Results")
+	shell := NewShell(&theme, "Search › Results")
 	items := make([]list.Item, 0, len(animes))
 	for _, anime := range animes {
 		if anime == nil {
@@ -161,11 +158,7 @@ func (m *animeResultsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.shell.Resize(msg.Width, msg.Height)
-		width, height := m.shell.ContentSize()
-		if width >= wideResultsBreakpoint {
-			width = width * 3 / 5
-		}
-		m.results.SetSize(width, height)
+		m.results.SetSize(m.shell.ContentSize())
 		return m, nil
 
 	case tea.KeyPressMsg:
@@ -205,60 +198,15 @@ func (m *animeResultsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-// View renders compact results or a wide list-and-details layout.
+// View renders the full-width result list inside the shell chrome. There is
+// no side panel: every fact a source gives (title, source) is already on the
+// row, and a panel only cost list width — long titles were clipped at 32
+// columns on a 100-column terminal.
 func (m *animeResultsModel) View() tea.View {
-	width, height := m.shell.ContentSize()
-	body := m.results.View()
-	if width >= wideResultsBreakpoint {
-		listWidth := width * 3 / 5
-		panelWidth := width - listWidth
-		name, source, year, mediaType, quality := "No result selected", "—", "—", "—", "—"
-		if item, ok := m.results.SelectedItem().(animeResultItem); ok && item.anime != nil {
-			name = item.Title()
-			if value := singleLine(item.anime.Source); value != "" {
-				source = value
-			}
-			if value := singleLine(item.anime.Year); value != "" {
-				year = value
-			}
-			if value := singleLine(string(item.anime.MediaType)); value != "" {
-				mediaType = value
-			}
-			if value := singleLine(item.anime.Quality); value != "" {
-				quality = value
-			}
-		}
-		details := renderAnimeDetails(&m.theme, name, source, year, mediaType, quality)
-		frameWidth, frameHeight := m.theme.Panel.GetFrameSize()
-		panel := m.theme.Panel.
-			Width(max(panelWidth-frameWidth, 1)).
-			Height(max(height-frameHeight, 1)).
-			Render(details)
-		body = lipgloss.JoinHorizontal(lipgloss.Top, body, panel)
-	}
-
-	footer := m.results.Help.ShortHelpView(m.results.ShortHelp())
-	view := tea.NewView(m.shell.Render(body, footer))
+	view := tea.NewView(m.shell.Render(m.results.View(), "↑↓ move · / filter · enter open · esc back"))
 	view.AltScreen = true
-	view.WindowTitle = "GoAnime - Results"
+	view.WindowTitle = "GonimeId - Results"
 	return view
-}
-
-// renderAnimeDetails composes styled lines without JoinVertical's unstyled padding.
-func renderAnimeDetails(theme *Theme, name, source, year, mediaType, quality string) string {
-	return strings.Join([]string{
-		theme.Primary.Render("Details"),
-		"",
-		theme.Value.Render(name),
-		"",
-		theme.Label.Render("Source"), theme.Value.Render(source),
-		"",
-		theme.Label.Render("Year"), theme.Value.Render(year),
-		"",
-		theme.Label.Render("Type"), theme.Value.Render(mediaType),
-		"",
-		theme.Label.Render("Quality"), theme.Value.Render(quality),
-	}, "\n")
 }
 
 type animeResultsRunner func(tea.Model) (tea.Model, error)

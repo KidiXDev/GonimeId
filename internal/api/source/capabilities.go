@@ -3,8 +3,8 @@ package source
 import (
 	"context"
 
-	"github.com/alvarorichard/Goanime/internal/models"
-	"github.com/alvarorichard/Goanime/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/util"
 )
 
 // Optional capabilities (Model C, ARCHITECTURE.md §2).

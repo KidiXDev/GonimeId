@@ -27,5 +27,5 @@ func TestNewTheme(t *testing.T) {
 	assert.False(t, dark.SelectedTitle.GetBorderRight())
 	assert.True(t, dark.FilterMatch.GetUnderline())
 	assert.True(t, dark.Value.GetBold())
-	assert.Contains(t, dark.Header.Render("GoAnime"), "GoAnime")
+	assert.Contains(t, dark.Header.Render("GonimeId"), "GonimeId")
 }

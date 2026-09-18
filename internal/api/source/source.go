@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/alvarorichard/Goanime/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/models"
 )
 
 // Descriptor is a source's self-declared identity (Model B).
@@ -21,9 +21,9 @@ type Descriptor struct {
 	MediaTypes  []models.MediaType // MediaType values that map to this source
 
 	// DefaultDisabled marks a source that is OFF unless the user opts in via
-	// GOANIME_ENABLED_SOURCES (ARCHITECTURE.md §7 S1). Use it for experimental
+	// GONIMEID_ENABLED_SOURCES (ARCHITECTURE.md §7 S1). Use it for experimental
 	// or fragile sources that shouldn't ship live. Independent of the always-
-	// available GOANIME_DISABLED_SOURCES kill-switch.
+	// available GONIMEID_DISABLED_SOURCES kill-switch.
 	DefaultDisabled bool
 
 	// ProbeURL is the source's public homepage, used only to disambiguate a

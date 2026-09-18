@@ -19,13 +19,13 @@ func TestHasVersionArg(t *testing.T) {
 		args []string
 		want bool
 	}{
-		{"--version", []string{"goanime", "--version"}, true},
-		{"-version", []string{"goanime", "-version"}, true},
-		{"-v", []string{"goanime", "-v"}, true},
-		{"--v", []string{"goanime", "--v"}, true},
-		{"space version", []string{"goanime", " version"}, true},
-		{"no args", []string{"goanime"}, false},
-		{"unrelated arg", []string{"goanime", "play"}, false},
+		{"--version", []string{"gonimeid", "--version"}, true},
+		{"-version", []string{"gonimeid", "-version"}, true},
+		{"-v", []string{"gonimeid", "-v"}, true},
+		{"--v", []string{"gonimeid", "--v"}, true},
+		{"space version", []string{"gonimeid", " version"}, true},
+		{"no args", []string{"gonimeid"}, false},
+		{"unrelated arg", []string{"gonimeid", "play"}, false},
 	}
 
 	for _, tt := range tests {
@@ -50,7 +50,7 @@ func TestShowVersion(t *testing.T) {
 	require.NoError(t, err)
 	output := string(out)
 
-	assert.Contains(t, output, "GoAnime v"+Version)
+	assert.Contains(t, output, "GonimeId v"+Version)
 	assert.True(t,
 		strings.Contains(output, "with SQLite tracking") || strings.Contains(output, "without SQLite tracking"),
 		"output must mention SQLite tracking state: %q", output)

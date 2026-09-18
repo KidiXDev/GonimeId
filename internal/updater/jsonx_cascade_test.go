@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alvarorichard/Goanime/internal/util/jsonx"
+	"github.com/KidiXDev/GonimeId/internal/util/jsonx"
 )
 
 // serveJSON is a plain loopback server: checkForUpdatesFromURL builds its own
@@ -27,9 +27,9 @@ func TestUpdateCheckCascade_DecodesRelease(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{
 			"tag_name":"v99.0.0",
-			"name":"GoAnime 99",
+			"name":"GonimeId 99",
 			"body":"notes",
-			"assets":[{"name":"goanime_linux_amd64.tar.gz","browser_download_url":"https://example.com/a.tar.gz"}]
+			"assets":[{"name":"gonimeid_linux_amd64.tar.gz","browser_download_url":"https://example.com/a.tar.gz"}]
 		}`))
 	})
 
@@ -52,7 +52,7 @@ func TestUpdateCheckCascade_DecodesRelease(t *testing.T) {
 // semantics reach this call site too.
 func TestUpdateCheckCascade_CaseInsensitiveFields(t *testing.T) {
 	url := serveJSON(t, func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(`{"TAG_NAME":"v99.0.0","Name":"GoAnime 99","ASSETS":[]}`))
+		_, _ = w.Write([]byte(`{"TAG_NAME":"v99.0.0","Name":"GonimeId 99","ASSETS":[]}`))
 	})
 
 	release, _, err := checkForUpdatesFromURL(url, "1.0.0")

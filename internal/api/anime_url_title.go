@@ -9,9 +9,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/alvarorichard/Goanime/internal/models"
-	"github.com/alvarorichard/Goanime/internal/util"
-	"github.com/alvarorichard/Goanime/internal/util/jsonx"
+	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/util/jsonx"
 	"github.com/pkg/errors"
 )
 

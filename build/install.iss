@@ -1,11 +1,11 @@
-; GoAnime Windows Installer Script
+; GonimeId Windows Installer Script
 ; This script is designed to be run from CI with files staged in the build directory
 
-#define MyAppName "GoAnime"
+#define MyAppName "GonimeId"
 #define MyAppVersion "1.8.7"
-#define MyAppPublisher "GoAnime Team"
-#define MyAppURL "https://github.com/alvarorichard/GoAnime"
-#define MyAppExeName "goanime.exe"
+#define MyAppPublisher "GonimeId Team"
+#define MyAppURL "https://github.com/KidiXDev/GonimeId"
+#define MyAppExeName "gonimeid.exe"
 
 [Setup]
 AppId={{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}
@@ -20,7 +20,7 @@ DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 ; Output directory is relative to the script location
 OutputDir=..\dist
-OutputBaseFilename=GoAnime-Installer-{#MyAppVersion}
+OutputBaseFilename=GonimeId-Installer-{#MyAppVersion}
 ; SetupIconFile=..\assets\icon.ico  ; Uncomment if icon.ico is available
 UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma2
@@ -34,11 +34,11 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "addtopath"; Description: "Add GoAnime and MPV to PATH"; GroupDescription: "System Integration:"; Flags: checkedonce
+Name: "addtopath"; Description: "Add GonimeId and MPV to PATH"; GroupDescription: "System Integration:"; Flags: checkedonce
 
 [Files]
 ; Main application binary (staged in build/staging directory)
-Source: "staging\goanime.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "staging\gonimeid.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 ; MPV binary and required DLLs for video playback
 Source: "staging\bin\mpv.exe"; DestDir: "{app}\bin"; Flags: ignoreversion
@@ -54,9 +54,9 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 
 [Run]
 ; Add to user PATH using setx for immediate effect (works better in Windows Sandbox)
-; This runs before the postinstall option so PATH is ready when GoAnime starts
+; This runs before the postinstall option so PATH is ready when GonimeId starts
 Filename: "{cmd}"; Parameters: "/C setx PATH ""%PATH%;{app};{app}\bin"""; Flags: runhidden runascurrentuser; Tasks: addtopath
-; Option to run GoAnime after installation
+; Option to run GonimeId after installation
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent shellexec
 
 [Registry]

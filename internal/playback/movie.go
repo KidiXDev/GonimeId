@@ -11,11 +11,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alvarorichard/Goanime/internal/api"
-	"github.com/alvarorichard/Goanime/internal/discord"
-	"github.com/alvarorichard/Goanime/internal/models"
-	"github.com/alvarorichard/Goanime/internal/player"
-	"github.com/alvarorichard/Goanime/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/api"
+	"github.com/KidiXDev/GonimeId/internal/discord"
+	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/player"
+	"github.com/KidiXDev/GonimeId/internal/util"
 )
 
 // HandleMovie gerencia a reprodução de filmes/OVAs
@@ -193,7 +193,7 @@ func createUpdater(anime *models.Anime, isPaused *bool, animeMutex *sync.Mutex, 
 // getSocketPath retorna o caminho do socket MPV baseado no sistema operacional
 func getSocketPath() string {
 	if runtime.GOOS == "windows" {
-		return `\\.\pipe\goanime_mpvsocket`
+		return `\\.\pipe\gonimeid_mpvsocket`
 	}
 	// Use os.TempDir() for macOS compatibility
 	return filepath.Join(os.TempDir(), "mpvsocket")

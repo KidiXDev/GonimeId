@@ -5,17 +5,17 @@ set -e
 
 # Variables
 OUTPUT_DIR="../build"
-BINARY_NAME="goanime-linux"
+BINARY_NAME="gonimeid-linux"
 BINARY_PATH="$OUTPUT_DIR/$BINARY_NAME"
 TARBALL_NAME="$BINARY_NAME.tar.gz"
 TARBALL_PATH="$OUTPUT_DIR/$TARBALL_NAME"
 CHECKSUM_FILE="$TARBALL_PATH.sha256"
-MAIN_PACKAGE="../cmd/goanime"
+MAIN_PACKAGE="../cmd/gonimeid"
 
 # Create the output directory if it doesn't exist
 mkdir -p "$OUTPUT_DIR"
 
-echo "Building the goanime binary for Linux with SQLite support..."
+echo "Building the gonimeid binary for Linux with SQLite support..."
 echo "Note: This build enables CGO and requires SQLite development libraries"
 
 # Check if gcc and sqlite3 development libraries are installed

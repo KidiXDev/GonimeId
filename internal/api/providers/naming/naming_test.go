@@ -3,7 +3,7 @@ package naming
 import (
 	"testing"
 
-	"github.com/alvarorichard/Goanime/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/models"
 )
 
 func TestSanitizeFilename(t *testing.T) {
@@ -35,13 +35,10 @@ func TestCleanTitle(t *testing.T) {
 		want  string
 	}{
 		{"Naruto [English]", "Naruto"},
-		{"Naruto [PT-BR]", "Naruto"},
-		{"Naruto [AllAnime] [English]", "Naruto"},
-		{"Naruto [AnimeFire]", "Naruto"},
 		{"[Indonesian] Naruto [Otakudesu]", "Naruto"},
+		{"Naruto [Samehadaku]", "Naruto"},
 		{"Naruto [Movie]", "Naruto"},
 		{"Naruto", "Naruto"},
-		{"Attack on Titan [Multilanguage]", "Attack on Titan"},
 		// If only tags, return original
 		{"[English]", "[English]"},
 	}
@@ -245,7 +242,7 @@ func TestFromAnimeEpisode(t *testing.T) {
 		{
 			name: "scraped name fallback",
 			anime: &models.Anime{
-				Name: "My Anime [AnimeFire]",
+				Name: "My Anime [Otakudesu]",
 			},
 			episode: &models.Episode{Num: 1},
 			season:  1,
@@ -262,9 +259,7 @@ func TestFromAnimeEpisode(t *testing.T) {
 			anime: &models.Anime{
 				Name:      "Spirited Away [Movie]",
 				MediaType: models.MediaTypeMovie,
-				TMDBDetails: &models.TMDBDetails{
-					ReleaseDate: "2001-07-20",
-				},
+				Year:      "2001",
 			},
 			episode: nil,
 			season:  0,
@@ -394,9 +389,7 @@ func TestFullPath_Integration(t *testing.T) {
 			anime: &models.Anime{
 				Name:      "Spirited Away [Movie]",
 				MediaType: models.MediaTypeMovie,
-				TMDBDetails: &models.TMDBDetails{
-					ReleaseDate: "2001-07-20",
-				},
+				Year:      "2001",
 				Details: models.AniListDetails{
 					Title: models.Title{English: "Spirited Away"},
 				},
@@ -408,7 +401,7 @@ func TestFullPath_Integration(t *testing.T) {
 		{
 			name: "Anime without AniList data",
 			anime: &models.Anime{
-				Name: "Some Anime [Goyabu]",
+				Name: "Some Anime [Samehadaku]",
 				Year: "2020",
 			},
 			episode: &models.Episode{Num: 7},

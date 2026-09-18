@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/alvarorichard/Goanime/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -171,7 +171,7 @@ func TestResolve(t *testing.T) {
 		{"explicit wins over URL", &models.Anime{Source: "Goyabu", URL: "https://animefire.plus/x"}, Goyabu, goyabu},
 		{"name tag", &models.Anime{Name: "Naruto [English]"}, AniDB, allAnime},
 		{"URL pattern", &models.Anime{URL: "https://animefire.plus/naruto"}, AnimeFire, animeFire},
-		{"PT-BR fallback to AnimeFire", &models.Anime{Name: "Naruto [PT-BR]"}, AnimeFire, animeFire},
+		{"language tag alone is no match", &models.Anime{Name: "Naruto [PT-BR]"}, Unknown, nil},
 		{"no match is Unknown", &models.Anime{Name: "X", URL: "https://example.com/v"}, Unknown, nil},
 	}
 	for _, tt := range tests {

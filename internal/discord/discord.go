@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alvarorichard/Goanime/internal/models"
-	"github.com/alvarorichard/Goanime/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/util"
 	"github.com/tr1xem/go-discordrpc/client"
 )
 

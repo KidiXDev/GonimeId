@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alvarorichard/Goanime/internal/api/source"
-	"github.com/alvarorichard/Goanime/internal/models"
-	"github.com/alvarorichard/Goanime/internal/scraper/netx"
+	"github.com/KidiXDev/GonimeId/internal/api/source"
+	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/scraper/netx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -36,17 +36,17 @@ func (s *epStubSource) FetchStreamURL(context.Context, *models.Episode, *models.
 func TestFetchEpisodes_DispatchesThroughRegistry(t *testing.T) {
 	// Swaps the global registry — not parallel.
 	stub := &epStubSource{
-		desc: source.Descriptor{Kind: source.Goyabu, Priority: 1, URLMatchers: []string{"goyabu"}},
+		desc: source.Descriptor{Kind: source.Samehadaku, Priority: 1, URLMatchers: []string{"samehadaku"}},
 		eps:  []models.Episode{{Number: "1"}, {Number: "2"}},
 	}
 	restore := source.SwapRegistryForTesting(stub)
 	t.Cleanup(restore)
 
-	eps, err := FetchEpisodes(context.Background(), &models.Anime{URL: "https://goyabu.io/x"})
+	eps, err := FetchEpisodes(context.Background(), &models.Anime{URL: "https://v2.samehadaku.how/anime/x/"})
 	require.NoError(t, err)
 	assert.Len(t, eps, 2)
 	require.NotNil(t, stub.gotAnime)
-	assert.Equal(t, "Goyabu", stub.gotAnime.Source, "empty source must be canonicalized to the resolved kind")
+	assert.Equal(t, "Samehadaku", stub.gotAnime.Source, "empty source must be canonicalized to the resolved kind")
 }
 
 func TestFetchEpisodes_NilAnime(t *testing.T) {
@@ -58,7 +58,7 @@ func TestFetchEpisodes_NilAnime(t *testing.T) {
 func TestFetchEpisodes_UnknownIsReportedNotGuessed(t *testing.T) {
 	// Swaps the global registry — not parallel.
 	only := &epStubSource{
-		desc: source.Descriptor{Kind: source.AniDB, Priority: 1, Explicit: []string{"AniDB"}},
+		desc: source.Descriptor{Kind: source.Otakudesu, Priority: 1, Explicit: []string{"Otakudesu"}},
 		eps:  []models.Episode{{Number: "1"}},
 	}
 	restore := source.SwapRegistryForTesting(only)
@@ -75,15 +75,15 @@ func TestFetchEpisodes_UnknownIsReportedNotGuessed(t *testing.T) {
 func TestFetchEpisodes_ExplicitSourceNotOverwritten(t *testing.T) {
 	// Swaps the global registry — not parallel.
 	af := &epStubSource{
-		desc: source.Descriptor{Kind: source.AnimeFire, Priority: 1, Explicit: []string{"Animefire.io", "AnimeFire"}},
+		desc: source.Descriptor{Kind: source.Otakudesu, Priority: 1, Explicit: []string{"Otakudesu", "otakudesu.blog"}},
 	}
 	restore := source.SwapRegistryForTesting(af)
 	t.Cleanup(restore)
 
-	anime := &models.Anime{Source: "Animefire.io", URL: "https://animefire.plus/x"}
+	anime := &models.Anime{Source: "Otakudesu", URL: "https://otakudesu.blog/anime/x/"}
 	_, err := FetchEpisodes(context.Background(), anime)
 	require.NoError(t, err)
-	assert.Equal(t, "Animefire.io", anime.Source, "an explicitly-set source must be left untouched")
+	assert.Equal(t, "Otakudesu", anime.Source, "an explicitly-set source must be left untouched")
 }
 
 // searchStubSource implements source.Searchable for SearchAll tests.
@@ -117,8 +117,8 @@ func newSearchStub(kind source.SourceKind, results []*models.Anime, err error) *
 
 func TestSearchAll_FansOutOverRegistry(t *testing.T) {
 	// Swaps the global registry — not parallel.
-	a := newSearchStub(source.AniDB, []*models.Anime{{Name: "[English] Naruto"}}, nil)
-	g := newSearchStub(source.Goyabu, []*models.Anime{{Name: "[PT-BR] Naruto"}}, nil)
+	a := newSearchStub(source.Otakudesu, []*models.Anime{{Name: "Naruto"}}, nil)
+	g := newSearchStub(source.Samehadaku, []*models.Anime{{Name: "Naruto"}}, nil)
 	restore := source.SwapRegistryForTesting(a, g)
 	t.Cleanup(restore)
 
@@ -131,12 +131,12 @@ func TestSearchAll_FansOutOverRegistry(t *testing.T) {
 
 func TestSearchAll_SpecificKindFilter(t *testing.T) {
 	// Swaps the global registry — not parallel.
-	a := newSearchStub(source.AniDB, []*models.Anime{{Name: "AA"}}, nil)
-	g := newSearchStub(source.Goyabu, []*models.Anime{{Name: "GY"}}, nil)
+	a := newSearchStub(source.Otakudesu, []*models.Anime{{Name: "AA"}}, nil)
+	g := newSearchStub(source.Samehadaku, []*models.Anime{{Name: "GY"}}, nil)
 	restore := source.SwapRegistryForTesting(a, g)
 	t.Cleanup(restore)
 
-	got, err := SearchAll(context.Background(), "x", source.Goyabu)
+	got, err := SearchAll(context.Background(), "x", source.Samehadaku)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	assert.Equal(t, "GY", got[0].Name)
@@ -146,8 +146,8 @@ func TestSearchAll_SpecificKindFilter(t *testing.T) {
 
 func TestSearchAll_ToleratesPerSourceFailure(t *testing.T) {
 	// Swaps the global registry — not parallel.
-	ok := newSearchStub(source.AniDB, []*models.Anime{{Name: "AA"}}, nil)
-	bad := newSearchStub(source.Goyabu, nil, assert.AnError)
+	ok := newSearchStub(source.Otakudesu, []*models.Anime{{Name: "AA"}}, nil)
+	bad := newSearchStub(source.Samehadaku, nil, assert.AnError)
 	restore := source.SwapRegistryForTesting(ok, bad)
 	t.Cleanup(restore)
 
@@ -158,8 +158,8 @@ func TestSearchAll_ToleratesPerSourceFailure(t *testing.T) {
 
 func TestSearchAll_AllFailReturnsError(t *testing.T) {
 	// Swaps the global registry — not parallel.
-	b1 := newSearchStub(source.AniDB, nil, assert.AnError)
-	b2 := newSearchStub(source.Goyabu, nil, assert.AnError)
+	b1 := newSearchStub(source.Otakudesu, nil, assert.AnError)
+	b2 := newSearchStub(source.Samehadaku, nil, assert.AnError)
 	restore := source.SwapRegistryForTesting(b1, b2)
 	t.Cleanup(restore)
 
@@ -193,14 +193,14 @@ func TestSearchOneWithTimeout_EnrichesWithOriginProbe(t *testing.T) {
 	t.Cleanup(func() { perSourceSearchTimeout = prev })
 
 	stub := &hangingSearchSource{
-		desc:    source.Descriptor{Kind: source.Goyabu, Priority: 1},
+		desc:    source.Descriptor{Kind: source.Samehadaku, Priority: 1},
 		release: make(chan struct{}),
 	}
 	t.Cleanup(func() { close(stub.release) }) // let the abandoned goroutine exit
 
 	got := searchOneWithTimeout(context.Background(), activeSearcher{
 		sr:       stub,
-		kind:     source.Goyabu,
+		kind:     source.Samehadaku,
 		probeURL: srv.URL,
 	}, "naruto")
 

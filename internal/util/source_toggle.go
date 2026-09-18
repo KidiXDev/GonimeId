@@ -9,8 +9,8 @@ import (
 //
 // A user can disable a source WITHOUT a rebuild by listing it in an env var:
 //
-//	GOANIME_DISABLED_SOURCES="AllAnime,Goyabu"   # turn these off
-//	GOANIME_ENABLED_SOURCES="Experimental"       # opt into a DefaultDisabled one
+//	GONIMEID_DISABLED_SOURCES="AllAnime,Goyabu"   # turn these off
+//	GONIMEID_ENABLED_SOURCES="Experimental"       # opt into a DefaultDisabled one
 //
 // It is the manual complement to the automatic per-source circuit breaker: the
 // breaker reacts to failures at runtime; this lets a human pre-empt a known-bad
@@ -18,8 +18,8 @@ import (
 // so BOTH the dispatch layer (internal/api/source) and the search layer
 // (internal/scraper) can honor it without an import cycle.
 const (
-	disabledSourcesEnv = "GOANIME_DISABLED_SOURCES"
-	enabledSourcesEnv  = "GOANIME_ENABLED_SOURCES"
+	disabledSourcesEnv = "GONIMEID_DISABLED_SOURCES"
+	enabledSourcesEnv  = "GONIMEID_ENABLED_SOURCES"
 )
 
 // canonSourceToken normalizes a source name to a comparison token so the env
@@ -53,14 +53,14 @@ func sourceListed(env, name string) bool {
 }
 
 // SourceDisabled reports whether the named source is turned off via
-// GOANIME_DISABLED_SOURCES. Matching is case-insensitive and dot-forgiving
+// GONIMEID_DISABLED_SOURCES. Matching is case-insensitive and dot-forgiving
 // (see canonSourceToken).
 func SourceDisabled(name string) bool {
 	return sourceListed(disabledSourcesEnv, name)
 }
 
 // SourceForceEnabled reports whether the named source is explicitly opted into
-// via GOANIME_ENABLED_SOURCES — used to turn on a source whose descriptor marks
+// via GONIMEID_ENABLED_SOURCES — used to turn on a source whose descriptor marks
 // it DefaultDisabled (off unless requested).
 func SourceForceEnabled(name string) bool {
 	return sourceListed(enabledSourcesEnv, name)

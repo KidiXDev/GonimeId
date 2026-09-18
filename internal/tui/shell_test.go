@@ -133,7 +133,7 @@ func TestShellRender(t *testing.T) {
 
 			got := shell.Render("BODY", "↑↓/jk move  type filter")
 
-			assert.Contains(t, got, "GOANIME")
+			assert.Contains(t, got, "GONIMEID")
 			assert.Contains(t, got, "BODY")
 			assert.Contains(t, got, tt.wantFooter)
 			assert.Equal(t, tt.wantBreadcrumb, strings.Contains(got, "Search > Results"))

@@ -8,14 +8,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alvarorichard/Goanime/internal/api"
-	"github.com/alvarorichard/Goanime/internal/api/providers"
+	"github.com/KidiXDev/GonimeId/internal/api"
+	"github.com/KidiXDev/GonimeId/internal/api/providers"
 
 	"charm.land/huh/v2"
 	"charm.land/huh/v2/spinner"
-	"github.com/alvarorichard/Goanime/internal/models"
-	"github.com/alvarorichard/Goanime/internal/tui"
-	"github.com/alvarorichard/Goanime/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/tui"
+	"github.com/KidiXDev/GonimeId/internal/util"
 )
 
 // Injectable package-level dependencies. Tests swap these via the
@@ -82,8 +82,8 @@ func defaultRunSpinner(title string, action func()) {
 func defaultPromptForName(_ string) (string, error) {
 	var newName string
 	prompt := huh.NewInput().
-		Title("Search Again").
-		Description("Enter a new anime name to search for:").
+		Title("Search anime").
+		Description("No luck — try another title").
 		Value(&newName).
 		Validate(func(v string) error {
 			if len(strings.TrimSpace(v)) < 2 {
@@ -186,21 +186,16 @@ func fetchAnimeDetailsCore(anime *models.Anime) {
 	if anime == nil {
 		return
 	}
-	// For FlixHQ/SuperFlix movies/TV shows: skip AniList, optionally enrich.
+	// Movie/TV catalogs skip AniList and use the source's own details.
 	if anime.HasInteractiveEpisodeFlow() {
 		util.Debugf("Skipping AniList enrichment for movie/TV content: %s (source: %s)", anime.Name, anime.Source)
-		if anime.Source != "SuperFlix" {
-			if err := sourceDetailsFetchFn(anime); err != nil {
-				util.Debugf("Failed to enrich content with TMDB: %v", err)
-			}
+		if err := sourceDetailsFetchFn(anime); err != nil {
+			util.Debugf("Failed to enrich content: %v", err)
 		}
 		return
 	}
 
-	// The second enricher (sourceDetailsFetchFn, an og:image scrape of the
-	// anime page) was only ever reached for AllAnime titles. That source is
-	// gone, so AniList is the single enrichment path for anime; movies/TV still
-	// take the TMDB branch above.
+	// AniList is the single enrichment path for anime.
 	if anime.AnilistID <= 0 || anime.MalID <= 0 || anime.ImageURL == "" {
 		enrichFromAniList(anime)
 		return

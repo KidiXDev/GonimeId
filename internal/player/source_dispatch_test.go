@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/alvarorichard/Goanime/internal/api/source"
-	"github.com/alvarorichard/Goanime/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/api/source"
+	"github.com/KidiXDev/GonimeId/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -61,18 +61,18 @@ func TestGetVideoURLForEpisodeEnhanced_DispatchesThroughSourceRegistry(t *testin
 func TestGetVideoURLForEpisodeEnhanced_RegistrySourceErrorNotSilentlyFallenBack(t *testing.T) {
 	// Swaps the global source registry — not parallel.
 	stub := &stubSource{
-		desc: source.Descriptor{Kind: source.AniDB, Priority: 1, Explicit: []string{"AniDB"}},
+		desc: source.Descriptor{Kind: source.Otakudesu, Priority: 1, Explicit: []string{"Otakudesu"}},
 		err:  assert.AnError,
 	}
 	restore := source.SwapRegistryForTesting(stub)
 	t.Cleanup(restore)
 
-	anime := &models.Anime{Source: "AniDB", URL: "https://anidb.app/anime/x-1"}
+	anime := &models.Anime{Source: "Otakudesu", URL: "https://otakudesu.blog/anime/x/"}
 	ep := &models.Episode{Number: "1", URL: "https://anidb.app/episode/1"}
 
 	_, err := GetVideoURLForEpisodeEnhanced(context.Background(), ep, anime)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to get AniDB stream URL")
+	assert.Contains(t, err.Error(), "failed to get Otakudesu stream URL")
 }
 
 // TestGetVideoURLForEpisodeEnhanced_MovieTVErrorKeepsSourceLabel pins the
@@ -80,18 +80,18 @@ func TestGetVideoURLForEpisodeEnhanced_RegistrySourceErrorNotSilentlyFallenBack(
 func TestGetVideoURLForEpisodeEnhanced_MovieTVErrorKeepsSourceLabel(t *testing.T) {
 	// Swaps the global source registry — not parallel.
 	stub := &stubSource{
-		desc: source.Descriptor{Kind: source.SuperFlix, Priority: 1, Explicit: []string{"SuperFlix"}},
+		desc: source.Descriptor{Kind: source.Samehadaku, Priority: 1, Explicit: []string{"Samehadaku"}},
 		err:  assert.AnError,
 	}
 	restore := source.SwapRegistryForTesting(stub)
 	t.Cleanup(restore)
 
-	anime := &models.Anime{Source: "SuperFlix", URL: "1234", MediaType: models.MediaTypeTV}
+	anime := &models.Anime{Source: "Samehadaku", URL: "1234", MediaType: models.MediaTypeTV}
 	ep := &models.Episode{Number: "1", URL: "1234"}
 
 	_, err := GetVideoURLForEpisodeEnhanced(context.Background(), ep, anime)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to get SuperFlix stream URL")
+	assert.Contains(t, err.Error(), "failed to get Samehadaku stream URL")
 }
 
 func TestGetVideoURLForEpisodeEnhanced_NilAnimeUnmatchedIDErrors(t *testing.T) {
@@ -106,17 +106,17 @@ func TestGetVideoURLForEpisodeEnhanced_NilAnimeUnmatchedIDErrors(t *testing.T) {
 }
 
 // TestGetVideoURLForEpisodeEnhanced_StrictSourceDisablesBestEffort pins Phase
-// 2.2: with GOANIME_STRICT_SOURCE set, an unrecognized source fails loudly
+// 2.2: with GONIMEID_STRICT_SOURCE set, an unrecognized source fails loudly
 // instead of dispatching best-effort AllAnime.
 func TestGetVideoURLForEpisodeEnhanced_StrictSourceDisablesBestEffort(t *testing.T) {
 	// Swaps the global source registry and env — not parallel.
 	stub := &stubSource{
-		desc: source.Descriptor{Kind: source.AniDB, Priority: 1, Explicit: []string{"AllAnime"}},
+		desc: source.Descriptor{Kind: source.Otakudesu, Priority: 1, Explicit: []string{"AllAnime"}},
 		url:  "https://cdn.example/never.mp4",
 	}
 	restore := source.SwapRegistryForTesting(stub)
 	t.Cleanup(restore)
-	t.Setenv("GOANIME_STRICT_SOURCE", "1")
+	t.Setenv("GONIMEID_STRICT_SOURCE", "1")
 
 	anime := &models.Anime{Name: "Mystery", URL: "https://unknown.example/x"}
 	ep := &models.Episode{Number: "1", URL: "https://unknown.example/x/1"}
@@ -134,7 +134,7 @@ func TestGetVideoURLForEpisodeEnhanced_StrictSourceDisablesBestEffort(t *testing
 func TestGetVideoURLForEpisodeEnhanced_UnknownIsReportedNotGuessed(t *testing.T) {
 	// Swaps the global source registry — not parallel.
 	stub := &stubSource{
-		desc: source.Descriptor{Kind: source.AniDB, Priority: 1, Explicit: []string{"AllAnime"}},
+		desc: source.Descriptor{Kind: source.Otakudesu, Priority: 1, Explicit: []string{"AllAnime"}},
 		url:  "https://cdn.example/best-effort.mp4",
 	}
 	restore := source.SwapRegistryForTesting(stub)
@@ -167,14 +167,14 @@ func (g *gatedStubSource) WarmUp(_ context.Context) error {
 func TestGetVideoURLForEpisodeEnhanced_WarmsUpBrowserGatedBeforeFetch(t *testing.T) {
 	// Swaps the global source registry — not parallel.
 	stub := &gatedStubSource{
-		desc:      source.Descriptor{Kind: source.SuperFlix, Priority: 1, Explicit: []string{"SuperFlix"}},
+		desc:      source.Descriptor{Kind: source.Samehadaku, Priority: 1, Explicit: []string{"Samehadaku"}},
 		url:       "https://cdn.example/should-not-be-reached.m3u8",
 		warmUpErr: assert.AnError,
 	}
 	restore := source.SwapRegistryForTesting(stub)
 	t.Cleanup(restore)
 
-	anime := &models.Anime{Source: "SuperFlix", URL: "1234", MediaType: models.MediaTypeTV}
+	anime := &models.Anime{Source: "Samehadaku", URL: "1234", MediaType: models.MediaTypeTV}
 	ep := &models.Episode{Number: "1", URL: "1234"}
 
 	_, err := GetVideoURLForEpisodeEnhanced(context.Background(), ep, anime)
@@ -188,13 +188,13 @@ func TestGetVideoURLForEpisodeEnhanced_WarmsUpBrowserGatedBeforeFetch(t *testing
 func TestGetVideoURLForEpisodeEnhanced_WarmUpSuccessProceedsToFetch(t *testing.T) {
 	// Swaps the global source registry — not parallel.
 	stub := &gatedStubSource{
-		desc: source.Descriptor{Kind: source.SuperFlix, Priority: 1, Explicit: []string{"SuperFlix"}},
+		desc: source.Descriptor{Kind: source.Samehadaku, Priority: 1, Explicit: []string{"Samehadaku"}},
 		url:  "https://cdn.example/sf.m3u8",
 	}
 	restore := source.SwapRegistryForTesting(stub)
 	t.Cleanup(restore)
 
-	anime := &models.Anime{Source: "SuperFlix", URL: "1234", MediaType: models.MediaTypeTV}
+	anime := &models.Anime{Source: "Samehadaku", URL: "1234", MediaType: models.MediaTypeTV}
 	ep := &models.Episode{Number: "1", URL: "1234"}
 
 	url, err := GetVideoURLForEpisodeEnhanced(context.Background(), ep, anime)

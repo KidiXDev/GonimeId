@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/alvarorichard/Goanime/internal/api/source"
-	"github.com/alvarorichard/Goanime/internal/models"
-	"github.com/alvarorichard/Goanime/internal/scraper"
+	"github.com/KidiXDev/GonimeId/internal/api/source"
+	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/scraper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -35,103 +35,47 @@ func TestEpisodeNumber(t *testing.T) {
 	}
 }
 
-func TestAllAnimeProvider_KindAndHasSeasons(t *testing.T) {
+func TestIDSubProviders_DescribeAndScraper(t *testing.T) {
 	t.Parallel()
-	p := &anidbProvider{}
-	assert.Equal(t, source.AniDB, p.Describe().Kind)
-	assert.False(t, p.HasSeasons())
-}
-
-func TestAnimeFireProvider_KindAndHasSeasons(t *testing.T) {
-	t.Parallel()
-	p := &animeFireProvider{}
-	assert.Equal(t, source.AnimeFire, p.Describe().Kind)
-	assert.False(t, p.HasSeasons())
-}
-
-func TestGoyabuProvider_KindAndHasSeasons(t *testing.T) {
-	t.Parallel()
-	p := &goyabuProvider{}
-	assert.Equal(t, source.Goyabu, p.Describe().Kind)
-	assert.False(t, p.HasSeasons())
-}
-
-func TestSuperFlixProvider_KindAndHasSeasons(t *testing.T) {
-	t.Parallel()
-	p := &superFlixProvider{}
-	assert.Equal(t, source.SuperFlix, p.Describe().Kind)
-	assert.True(t, p.HasSeasons())
-}
-
-func TestAnimeFireProvider_Describe(t *testing.T) {
-	t.Parallel()
-	d := (&animeFireProvider{}).Describe()
-	assert.Equal(t, source.AnimeFire, d.Kind)
-	assert.Equal(t, 10, d.Priority)
-	assert.Equal(t, []string{"Animefire.io", "AnimeFire"}, d.Explicit)
-	assert.Equal(t, []string{"[animefire]"}, d.Tags)
-	assert.Equal(t, []string{"animefire"}, d.URLMatchers)
-}
-
-func TestGoyabuProvider_Describe(t *testing.T) {
-	t.Parallel()
-	d := (&goyabuProvider{}).Describe()
-	assert.Equal(t, source.Goyabu, d.Kind)
-	assert.Equal(t, 20, d.Priority)
-	assert.Equal(t, []string{"Goyabu"}, d.Explicit)
-	assert.Equal(t, []string{"[goyabu]"}, d.Tags)
-	assert.Equal(t, []string{"goyabu"}, d.URLMatchers)
-}
-
-func TestSuperFlixProvider_Describe(t *testing.T) {
-	t.Parallel()
-	d := (&superFlixProvider{}).Describe()
-	assert.Equal(t, source.SuperFlix, d.Kind)
-	assert.Equal(t, 30, d.Priority)
-	assert.Equal(t, []string{"SuperFlix"}, d.Explicit)
-	assert.Equal(t, []string{"[superflix]"}, d.Tags)
-	assert.Equal(t, []string{"superflix"}, d.URLMatchers)
-}
-
-// Each provider's scraper() builds a standalone, correctly-typed adapter on the
-// Model B path (nil sm) — no ScraperManager involved.
-func TestAllAnimeProvider_Scraper(t *testing.T) {
-	t.Parallel()
-	ad, err := (&anidbProvider{}).scraper()
-	require.NoError(t, err)
-	require.NotNil(t, ad)
-	assert.Equal(t, scraper.AniDBType, ad.GetType())
-}
-
-func TestAnimeFireProvider_Scraper(t *testing.T) {
-	t.Parallel()
-	ad, err := (&animeFireProvider{}).scraper()
-	require.NoError(t, err)
-	require.NotNil(t, ad)
-	assert.Equal(t, scraper.AnimefireType, ad.GetType())
-}
-
-func TestGoyabuProvider_Scraper(t *testing.T) {
-	t.Parallel()
-	ad, err := (&goyabuProvider{}).scraper()
-	require.NoError(t, err)
-	require.NotNil(t, ad)
-	assert.Equal(t, scraper.GoyabuType, ad.GetType())
-}
-
-func TestSuperFlixProvider_Scraper(t *testing.T) {
-	t.Parallel()
-	ad, err := (&superFlixProvider{}).scraper()
-	require.NoError(t, err)
-	require.NotNil(t, ad)
-	assert.Equal(t, scraper.SuperFlixType, ad.GetType())
+	tests := []struct {
+		kind     source.SourceKind
+		st       scraper.ScraperType
+		priority int
+		host     string
+	}{
+		{source.Otakudesu, scraper.OtakudesuType, 10, "otakudesu"},
+		{source.Samehadaku, scraper.SamehadakuType, 20, "samehadaku"},
+	}
+	for _, tt := range tests {
+		t.Run(string(tt.kind), func(t *testing.T) {
+			t.Parallel()
+			s, ok := source.Registered(tt.kind)
+			require.True(t, ok)
+			p, ok := s.(*idSubProvider)
+			require.True(t, ok, "live registration must be an idSubProvider")
+			d := p.Describe()
+			assert.Equal(t, tt.kind, d.Kind)
+			assert.Equal(t, tt.priority, d.Priority)
+			assert.Contains(t, d.Explicit, string(tt.kind))
+			assert.Equal(t, []string{tt.host}, d.URLMatchers)
+			assert.NotEmpty(t, d.ProbeURL)
+			assert.False(t, p.HasSeasons())
+			ad, err := p.scraper()
+			require.NoError(t, err)
+			assert.Equal(t, tt.st, ad.GetType())
+			_, isCtx := ad.(scraper.ContextualScraper)
+			assert.True(t, isCtx, "adapter must honour cancellation")
+			_, isQL := ad.(scraper.QualityLister)
+			assert.True(t, isQL, "adapter must offer the quality picker")
+		})
+	}
 }
 
 // TestSourceRegistry_LiveSourcesRegistered verifies init() populated the
 // Model B registry with every live source.
 func TestSourceRegistry_LiveSourcesRegistered(t *testing.T) {
 	t.Parallel()
-	for _, kind := range []source.SourceKind{source.AniDB, source.AnimeFire, source.Goyabu, source.SuperFlix, source.Otakudesu, source.Samehadaku} {
+	for _, kind := range []source.SourceKind{source.Otakudesu, source.Samehadaku} {
 		s, ok := source.Registered(kind)
 		require.True(t, ok, "source %s must be registered", kind)
 		assert.Equal(t, kind, s.Describe().Kind)
@@ -150,18 +94,13 @@ func TestResolve_LiveRegistry(t *testing.T) {
 	}{
 		{"nil anime", nil, source.Unknown},
 		{"empty anime", &models.Anime{}, source.Unknown},
-		{"explicit AnimeFire legacy", &models.Anime{Source: "Animefire.io"}, source.AnimeFire},
-		{"explicit Goyabu", &models.Anime{Source: "Goyabu"}, source.Goyabu},
-		{"explicit SuperFlix", &models.Anime{Source: "SuperFlix"}, source.SuperFlix},
-		{"explicit wins over URL", &models.Anime{Source: "Goyabu", URL: "https://animefire.plus/x"}, source.Goyabu},
-		{"english tag", &models.Anime{Name: "Naruto [English]"}, source.AniDB},
+		{"explicit wins over URL", &models.Anime{Source: "Samehadaku", URL: "https://otakudesu.blog/anime/x/"}, source.Samehadaku},
+		{"explicit Samehadaku", &models.Anime{Source: "Samehadaku"}, source.Samehadaku},
+		{"otakudesu tag", &models.Anime{Name: "Naruto [Otakudesu]"}, source.Otakudesu},
+		{"PT-BR tag is no longer routed anywhere", &models.Anime{Name: "Naruto [PT-BR]"}, source.Unknown},
 		{"explicit Otakudesu", &models.Anime{Source: "Otakudesu"}, source.Otakudesu},
 		{"otakudesu URL", &models.Anime{URL: "https://otakudesu.blog/anime/naruto-sub-indo/"}, source.Otakudesu},
 		{"samehadaku URL", &models.Anime{URL: "https://v2.samehadaku.how/anime/naruto-kecil/"}, source.Samehadaku},
-		{"animefire tag", &models.Anime{Name: "Naruto [AnimeFire]"}, source.AnimeFire},
-		{"goyabu URL", &models.Anime{URL: "https://goyabu.to/naruto"}, source.Goyabu},
-		{"superflix URL", &models.Anime{URL: "https://superflix.to/naruto"}, source.SuperFlix},
-		{"PT-BR fallback", &models.Anime{Name: "Naruto [PT-BR]"}, source.AnimeFire},
 		{"unknown", &models.Anime{Name: "X", URL: "https://example.com/v"}, source.Unknown},
 	}
 	for _, tt := range tests {
@@ -186,11 +125,10 @@ func TestResolveURL_LiveRegistry(t *testing.T) {
 		wantKind source.SourceKind
 	}{
 		{"", source.Unknown},
-		{"https://animefire.plus/ep/naruto-1", source.AnimeFire},
-		{"https://goyabu.to/ep/naruto-1", source.Goyabu},
-		// The AllAnime host was removed; its URLs now resolve to nothing.
-		{"https://allanime.to/anime/hHjXnUTda", source.Unknown},
-		{"https://superflix.to/naruto", source.SuperFlix},
+		{"https://otakudesu.blog/episode/naruto-episode-1-sub-indo/", source.Otakudesu},
+		{"https://v2.samehadaku.how/naruto-episode-1/", source.Samehadaku},
+		// Removed hosts resolve to nothing rather than to a guess.
+		{"https://animefire.plus/ep/naruto-1", source.Unknown},
 		{"https://example.com/video", source.Unknown},
 	}
 	for _, tt := range tests {

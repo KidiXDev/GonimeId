@@ -23,7 +23,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/alvarorichard/Goanime/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/models"
 )
 
 // MediaInfo holds the metadata needed to generate Jellyfin/Plex-compatible paths.
@@ -72,7 +72,7 @@ func SanitizeFilename(name string) string {
 }
 
 // tagPattern matches source/language tags stripped by CleanTitle.
-var tagPattern = regexp.MustCompile(`\s*\[(?:English|Indonesian|PT-BR|Portuguese|Multilanguage|AllAnime|AniDB|AnimeFire|AnimeDrive|Goyabu|SuperFlix|FlixHQ|SFlix|9Anime|Otakudesu|Samehadaku|Movie|TV)\]`)
+var tagPattern = regexp.MustCompile(`\s*\[(?:English|Indonesian|Otakudesu|Samehadaku|Movie|TV)\]`)
 
 // CleanTitle removes source tags like [English], [PT-BR], [AllAnime] etc. from a title.
 func CleanTitle(title string) string {
@@ -209,19 +209,7 @@ func bestTitle(anime *models.Anime) string {
 
 // extractYear gets the year from Anime metadata.
 func extractYear(anime *models.Anime) string {
-	if anime.Year != "" {
-		return anime.Year
-	}
-	// Try TMDB
-	if anime.TMDBDetails != nil {
-		if anime.TMDBDetails.FirstAirDate != "" && len(anime.TMDBDetails.FirstAirDate) >= 4 {
-			return anime.TMDBDetails.FirstAirDate[:4]
-		}
-		if anime.TMDBDetails.ReleaseDate != "" && len(anime.TMDBDetails.ReleaseDate) >= 4 {
-			return anime.TMDBDetails.ReleaseDate[:4]
-		}
-	}
-	return ""
+	return anime.Year
 }
 
 // parseEpisodeNumber extracts a number from an episode number string.

@@ -18,8 +18,8 @@ import (
 
 	"charm.land/bubbles/v2/progress"
 	tea "charm.land/bubbletea/v2"
-	"github.com/alvarorichard/Goanime/internal/tui"
-	"github.com/alvarorichard/Goanime/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/tui"
+	"github.com/KidiXDev/GonimeId/internal/util"
 )
 
 // VideoUpscaleConfig holds configuration for video upscaling
@@ -124,7 +124,7 @@ func (v *VideoUpscaler) UpscaleVideo(ctx context.Context) error {
 	util.Info("Starting video upscaling with Anime4K algorithm...")
 
 	// Create temporary directory for frames
-	tempDir, err := os.MkdirTemp("", "goanime_upscale_")
+	tempDir, err := os.MkdirTemp("", "gonimeid_upscale_")
 	if err != nil {
 		return fmt.Errorf("failed to create temp directory: %w", err)
 	}

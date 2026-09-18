@@ -13,7 +13,7 @@ const (
 	shellChromeHeight  = 4
 )
 
-// Shell renders common GoAnime navigation around a screen body.
+// Shell renders common GonimeId navigation around a screen body.
 type Shell struct {
 	Theme      Theme
 	Breadcrumb string
@@ -53,7 +53,7 @@ func (s *Shell) ContentSize() (width, height int) {
 // Render wraps body content in responsive navigation chrome.
 func (s *Shell) Render(body, footer string) string {
 	width, height := s.ContentSize()
-	header := s.Theme.Header.Render("GOANIME")
+	header := s.Theme.Header.Render("GONIMEID")
 	if width >= 34 && s.Breadcrumb != "" {
 		header += "  " + s.Theme.Breadcrumb.Render(s.Breadcrumb)
 	}

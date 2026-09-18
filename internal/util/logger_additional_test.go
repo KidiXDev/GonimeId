@@ -75,7 +75,7 @@ func TestPrintSavedLocation_WritesLabelAndPath(t *testing.T) {
 
 func TestGetColoredPrefix_ContainsBrand(t *testing.T) {
 	out := getColoredPrefix()
-	assert.Contains(t, out, "GoAnime")
+	assert.Contains(t, out, "GonimeId")
 }
 
 func TestGetLogDir_ReturnsPlatformPath(t *testing.T) {
@@ -83,11 +83,11 @@ func TestGetLogDir_ReturnsPlatformPath(t *testing.T) {
 	require.NotEmpty(t, dir)
 	switch runtime.GOOS {
 	case "windows":
-		assert.Contains(t, dir, filepath.Join("GoAnime", "logs"))
+		assert.Contains(t, dir, filepath.Join("GonimeId", "logs"))
 	case "darwin":
-		assert.Contains(t, dir, filepath.Join("Library", "Logs", "GoAnime"))
+		assert.Contains(t, dir, filepath.Join("Library", "Logs", "GonimeId"))
 	default:
-		assert.Contains(t, dir, filepath.Join(".local", "share", "goanime", "logs"))
+		assert.Contains(t, dir, filepath.Join(".local", "share", "gonimeid", "logs"))
 	}
 }
 
@@ -117,7 +117,7 @@ func TestInitFileLogger_CreatesFileWithHeader(t *testing.T) {
 
 	data, err := os.ReadFile(LogFilePath) // #nosec G304
 	require.NoError(t, err)
-	assert.Contains(t, string(data), "GoAnime Debug Session")
+	assert.Contains(t, string(data), "GonimeId Debug Session")
 }
 
 func TestInitFileLogger_FailsWhenDirUncreatable(t *testing.T) {
@@ -323,12 +323,12 @@ func TestError_NilLoggerIsNoOp(t *testing.T) {
 // is via a child process. The child also writes a marker line to the file
 // logger so we can confirm the pre-exit writeToFile branch ran.
 func TestFatal_ExitsProcess(t *testing.T) {
-	if os.Getenv("GOANIME_FATAL_CHILD") == "1" {
+	if os.Getenv("GONIMEID_FATAL_CHILD") == "1" {
 		// Child: trigger Fatal with both file and console loggers wired.
 		var consoleBuf bytes.Buffer
 		Logger = log.NewWithOptions(&consoleBuf, log.Options{Prefix: "test"})
 		Logger.SetLevel(log.DebugLevel)
-		markerPath := os.Getenv("GOANIME_FATAL_MARKER")
+		markerPath := os.Getenv("GONIMEID_FATAL_MARKER")
 		f, err := os.OpenFile(markerPath, os.O_CREATE|os.O_WRONLY, 0o600) // #nosec G304
 		if err != nil {
 			os.Exit(99)
@@ -345,8 +345,8 @@ func TestFatal_ExitsProcess(t *testing.T) {
 	marker := filepath.Join(t.TempDir(), "fatal_marker.log")
 	cmd := exec.Command(os.Args[0], "-test.run=TestFatal_ExitsProcess", "-test.v")
 	cmd.Env = append(os.Environ(),
-		"GOANIME_FATAL_CHILD=1",
-		"GOANIME_FATAL_MARKER="+marker,
+		"GONIMEID_FATAL_CHILD=1",
+		"GONIMEID_FATAL_MARKER="+marker,
 	)
 	out, err := cmd.CombinedOutput()
 

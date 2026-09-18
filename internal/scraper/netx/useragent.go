@@ -5,7 +5,7 @@ package netx
 // its UA must match the browser that solves the Cloudflare challenge.
 const UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0"
 
-// APIUserAgent identifies GoAnime to first-party JSON/GraphQL APIs (AniList) as
+// APIUserAgent identifies GonimeId to first-party JSON/GraphQL APIs (AniList) as
 // an ordinary API client.
 //
 // It deliberately does NOT look like a browser — that is the whole point. AniList
@@ -17,4 +17,4 @@ const UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/201
 // Requests using it must also travel on a PLAIN net/http client: the shared surf
 // clients impersonate Chrome and overwrite the User-Agent, so no header the
 // caller sets can survive them.
-const APIUserAgent = "GoAnime/1.0 (+https://github.com/alvarorichard/GoAnime)"
+const APIUserAgent = "GonimeId/1.0 (+https://github.com/KidiXDev/GonimeId)"

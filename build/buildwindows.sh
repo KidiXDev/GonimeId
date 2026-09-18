@@ -5,12 +5,12 @@ set -e
 
 # Variáveis
 OUTPUT_DIR="../build"        # Diretório de saída para o binário e checksum
-BINARY_NAME="goanime.exe"    # Nome do binário para Windows
+BINARY_NAME="gonimeid.exe"    # Nome do binário para Windows
 BINARY_PATH="$OUTPUT_DIR/$BINARY_NAME"
-ZIP_NAME="goanime-windows.zip"
+ZIP_NAME="gonimeid-windows.zip"
 ZIP_PATH="$OUTPUT_DIR/$ZIP_NAME"
 CHECKSUM_FILE="$ZIP_PATH.sha256"
-MAIN_PACKAGE="../cmd/goanime"
+MAIN_PACKAGE="../cmd/gonimeid"
 
 # Detecta a arquitetura
 ARCH=$(uname -m)
@@ -26,7 +26,7 @@ fi
 # Cria o diretório de saída se não existir
 mkdir -p "$OUTPUT_DIR"
 
-echo "Compilando o binário goanime para Windows ($GOARCH)..."
+echo "Compilando o binário gonimeid para Windows ($GOARCH)..."
 # Para Windows, precisamos garantir que o go-winio esteja disponível
 # Mas com CGO_ENABLED=0, o SQLite será compilado sem suporte nativo
 CGO_ENABLED=0 GOOS=windows GOARCH=$GOARCH go build -o "$BINARY_PATH" -ldflags="-s -w" -trimpath -tags="windows" "$MAIN_PACKAGE"

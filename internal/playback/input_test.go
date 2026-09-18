@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/alvarorichard/Goanime/internal/tui"
+	"github.com/KidiXDev/GonimeId/internal/tui"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

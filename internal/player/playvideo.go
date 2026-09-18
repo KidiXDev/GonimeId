@@ -15,14 +15,13 @@ import (
 	"time"
 
 	"charm.land/huh/v2"
-	"github.com/alvarorichard/Goanime/internal/api"
-	"github.com/alvarorichard/Goanime/internal/discord"
-	"github.com/alvarorichard/Goanime/internal/models"
-	"github.com/alvarorichard/Goanime/internal/scraper/providers/superflix"
-	"github.com/alvarorichard/Goanime/internal/tracking"
-	"github.com/alvarorichard/Goanime/internal/tui"
-	"github.com/alvarorichard/Goanime/internal/upscaler"
-	"github.com/alvarorichard/Goanime/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/api"
+	"github.com/KidiXDev/GonimeId/internal/discord"
+	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/tracking"
+	"github.com/KidiXDev/GonimeId/internal/tui"
+	"github.com/KidiXDev/GonimeId/internal/upscaler"
+	"github.com/KidiXDev/GonimeId/internal/util"
 )
 
 // ErrUserQuit is returned when the user chooses to quit the application
@@ -45,7 +44,7 @@ var dubSubTagRe = regexp.MustCompile(`\s*\((?i:Dublado|Legendado|SUB|DUB|Subbed|
 
 const defaultHLSReferer = "https://streameeeeee.site/"
 
-func appendPlaybackRefererArgs(mpvArgs []string, videoURL string, isHLSStream, needsCORSOrigin bool) (args []string, refererURL string) {
+func appendPlaybackRefererArgs(mpvArgs []string, videoURL string, isHLSStream bool) (args []string, refererURL string) {
 	lowerURL := strings.ToLower(strings.TrimSpace(videoURL))
 	if !strings.HasPrefix(lowerURL, "http://") && !strings.HasPrefix(lowerURL, "https://") {
 		return mpvArgs, ""
@@ -58,34 +57,7 @@ func appendPlaybackRefererArgs(mpvArgs []string, videoURL string, isHLSStream, n
 	if referer == "" {
 		return mpvArgs, ""
 	}
-
-	if !needsCORSOrigin {
-		return append(mpvArgs, "--http-header-fields=Referer: "+referer), referer
-	}
-
-	// SuperFlix's player CDN serves a signed URL only to a request that repeats
-	// the browser's own fingerprint — Referer alone gets a 403 on a URL the
-	// browser plays fine. superflix.CDNPlaybackHeaderFields owns the exact
-	// contract (and leads with the Referer); Origin is added on top because the
-	// segment hosts validate it separately.
-	//
-	// Each header goes in its own --http-header-fields-append: the contract's
-	// Accept-Language value contains a comma, and the comma-joined
-	// --http-header-fields form would split it into two malformed fields.
-	fields := superflix.CDNPlaybackHeaderFields(referer, util.GetGlobalUserAgent())
-	if origin := corsOriginOf(referer); origin != "" {
-		fields = append(fields, "Origin: "+origin)
-	}
-	for _, f := range fields {
-		mpvArgs = append(mpvArgs, "--http-header-fields-append="+f)
-	}
-	// mpv's own default UA (libmpv) is one of the values the CDN rejects, and
-	// --http-header-fields cannot override it — mpv sends both. --user-agent is
-	// the only option that replaces it.
-	if ua := util.GetGlobalUserAgent(); ua != "" {
-		mpvArgs = append(mpvArgs, "--user-agent="+ua)
-	}
-	return mpvArgs, referer
+	return append(mpvArgs, "--http-header-fields=Referer: "+referer), referer
 }
 
 // corsOriginOf reduces a Referer to its bare scheme://host, the value a browser
@@ -127,16 +99,9 @@ func appendHLSDemuxerArgs(mpvArgs []string, isHLSStream bool) []string {
 // makes SuperFlix audio play — is deterministic and unit-testable without
 // launching mpv.
 type playbackArgsInput struct {
-	VideoURL string
-	IsHLS    bool
-	Is9Anime bool
-	// IsSuperFlix adds the Origin header to the mpv request. SuperFlix's CDN
-	// serves the HLS segments from rotating third-party hosts and validates the
-	// CORS origin on them: hls.js fetches segments as a cross-origin XHR, so a
-	// real browser attaches Origin, and without it every segment comes back 403
-	// while the playlist itself loads fine. Verified live 2026-08-26 — the same
-	// stream goes from 121 failed segments to 0.
-	IsSuperFlix      bool
+	VideoURL         string
+	IsHLS            bool
+	Is9Anime         bool
 	UpscalingEnabled bool
 	ShaderArgs       []string
 	Wayland          bool
@@ -192,7 +157,7 @@ func buildPlaybackArgs(in playbackArgsInput) []string {
 		mpvArgs = append(mpvArgs, "--gpu-context=wayland")
 	}
 
-	mpvArgs, playbackReferer := appendPlaybackRefererArgs(mpvArgs, in.VideoURL, in.IsHLS, in.IsSuperFlix)
+	mpvArgs, playbackReferer := appendPlaybackRefererArgs(mpvArgs, in.VideoURL, in.IsHLS)
 	// Relax the HLS segment-extension allowlist so alternative-audio renditions
 	// with disguised segment extensions load (fixes video-plays-but-no-audio on
 	// SuperFlix/FirePlayer streams).
@@ -600,26 +565,17 @@ func playVideo(
 		}
 	}
 
-	// Audio/subtitle language preferences apply to movies/TV (FlixHQ) and to
-	// SuperFlix.
-	//
-	// SuperFlix must be matched by SOURCE, not by media type: its streams are
-	// multi-audio HLS with an external Portuguese subtitle track regardless of
-	// whether the entry is a movie, a series, an anime or a dorama. Gating on
-	// IsMovieOrTV alone silently threw away both the audio track the user picked
-	// and the subtitles for every SuperFlix anime.
-	isSuperFlix := util.IsSuperFlixSource()
+	// Audio/subtitle language preferences apply to movie/TV catalogs.
 	isMovieOrTV := false
 	if updater != nil && updater.GetAnime() != nil {
 		anime := updater.GetAnime()
-		isMovieOrTV = anime.IsMovieOrTV() || strings.Contains(strings.ToLower(anime.Source), "flixhq")
-		isSuperFlix = isSuperFlix || strings.EqualFold(anime.Source, "SuperFlix")
+		isMovieOrTV = anime.IsMovieOrTV()
 		// Update exact media type for download path organization.
 		if anime.MediaType != "" && titleSnap.MediaType == "" {
 			SetExactMediaType(string(anime.MediaType))
 		}
 	}
-	wantsLangPrefs := isMovieOrTV || isSuperFlix
+	wantsLangPrefs := isMovieOrTV
 
 	audioLang, subsLang := "", ""
 	if wantsLangPrefs {
@@ -672,7 +628,6 @@ func playVideo(
 		VideoURL:         videoURL,
 		IsHLS:            isHLSStream,
 		Is9Anime:         is9Anime,
-		IsSuperFlix:      util.IsSuperFlixSource(),
 		UpscalingEnabled: upscalingEnabled,
 		ShaderArgs:       shaderArgs,
 		Wayland:          wayland,
@@ -818,9 +773,9 @@ func getCurrentEpisode(episodes []models.Episode, num int) (*models.Episode, err
 
 // 	var dbPath string
 // 	if runtime.GOOS == "windows" {
-// 		dbPath = filepath.Join(os.Getenv("LOCALAPPDATA"), "GoAnime", "tracking", "progress.db")
+// 		dbPath = filepath.Join(os.Getenv("LOCALAPPDATA"), "GonimeId", "tracking", "progress.db")
 // 	} else {
-// 		dbPath = filepath.Join(currentUser.HomeDir, ".local", "goanime", "tracking", "progress.db")
+// 		dbPath = filepath.Join(currentUser.HomeDir, ".local", "gonimeid", "tracking", "progress.db")
 // 	}
 
 // 	tracker := tracking.NewLocalTracker(dbPath)
@@ -858,9 +813,9 @@ func getTrackerDBPath() string {
 	}
 
 	if runtime.GOOS == "windows" {
-		cachedDBPath = filepath.Join(os.Getenv("LOCALAPPDATA"), "GoAnime", "tracking", "progress.db")
+		cachedDBPath = filepath.Join(os.Getenv("LOCALAPPDATA"), "GonimeId", "tracking", "progress.db")
 	} else {
-		cachedDBPath = filepath.Join(currentUser.HomeDir, ".local", "goanime", "tracking", "progress.db")
+		cachedDBPath = filepath.Join(currentUser.HomeDir, ".local", "gonimeid", "tracking", "progress.db")
 	}
 
 	return cachedDBPath
@@ -1276,29 +1231,27 @@ func showPlayerMenu(animeName string, currentEpisodeNum int) (string, error) {
 
 	if isMovie {
 		// Movie: show movie name without episode number
-		title = "GoAnime Player Controls"
+		title = "Playing"
 		if animeName != "" {
-			title = fmt.Sprintf("Now playing: %s", animeName)
+			title = "Playing › " + animeName
 		}
 		menuItems = []menuOption{
-			{"← Back", "download_options"},
-			{"Replay movie", "next"},
-			{"Change movie", "change"},
+			{"Replay", "next"},
+			{"Change title", "change"},
 			{"Exit", "quit"},
 		}
 	} else {
 		// TV series / anime: show episode navigation
-		title = "GoAnime Player Controls"
+		title = "Playing"
 		if animeName != "" {
-			title = fmt.Sprintf("Now playing: %s - Episode %d", animeName, currentEpisodeNum)
+			title = fmt.Sprintf("Playing › %s › Episode %d", animeName, currentEpisodeNum)
 		}
 		menuItems = []menuOption{
-			{"← Back", "download_options"},
 			{"Next episode", "next"},
 			{"Previous episode", "previous"},
-			{"Select episode", "select"},
-			{"Change anime", "change"},
+			{"Pick an episode", "select"},
 			{"Skip intro", "skip"},
+			{"Change anime", "change"},
 			{"Exit", "quit"},
 		}
 	}
@@ -1309,7 +1262,7 @@ func showPlayerMenu(animeName string, currentEpisodeNum int) (string, error) {
 	}
 	idx, err := tui.PickLabels(labels, tui.PickOptions{
 		Breadcrumb:   tui.SingleLine(title),
-		WindowTitle:  "GoAnime - Player",
+		WindowTitle:  "GonimeId - Player",
 		ItemSingular: "option",
 		ItemPlural:   "options",
 	})
@@ -1607,7 +1560,7 @@ func selectAudioTrack(socketPath string) {
 	}
 	idx, err := tui.PickLabels(labels, tui.PickOptions{
 		Breadcrumb:   "Player > Audio",
-		WindowTitle:  "GoAnime - Audio Track",
+		WindowTitle:  "GonimeId - Audio Track",
 		ItemSingular: "track",
 		ItemPlural:   "tracks",
 	})
@@ -1686,7 +1639,7 @@ func selectSubtitleTrack(socketPath string) {
 	}
 	idx, err := tui.PickLabels(labels, tui.PickOptions{
 		Breadcrumb:   "Player > Subtitles",
-		WindowTitle:  "GoAnime - Subtitle Track",
+		WindowTitle:  "GonimeId - Subtitle Track",
 		ItemSingular: "track",
 		ItemPlural:   "tracks",
 	})

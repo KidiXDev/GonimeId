@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/KidiXDev/GonimeId/internal/models"
 	"github.com/PuerkitoBio/goquery"
-	"github.com/alvarorichard/Goanime/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

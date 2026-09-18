@@ -1,8 +1,8 @@
-# GoAnime Updater Test Documentation
+# GonimeId Updater Test Documentation
 
 ## Overview
 
-This document describes the comprehensive test suite implemented for the GoAnime updater functionality. The tests ensure that the update mechanism works reliably across different platforms and scenarios.
+This document describes the comprehensive test suite implemented for the GonimeId updater functionality. The tests ensure that the update mechanism works reliably across different platforms and scenarios.
 
 ## Test Coverage Summary
 
@@ -224,7 +224,7 @@ The following high-level functions are not tested due to complexity and external
 ### Basic Test Execution
 
 ```bash
-cd /path/to/GoAnime
+cd /path/to/GonimeId
 go test ./internal/updater -v
 ```
 
@@ -263,4 +263,4 @@ go test ./internal/updater -v -short
 - Platform test combinations should match supported targets
 - Version test cases should include real-world examples
 
-This comprehensive test suite provides a solid foundation for ensuring the reliability of the GoAnime updater functionality across different platforms and scenarios.
+This comprehensive test suite provides a solid foundation for ensuring the reliability of the GonimeId updater functionality across different platforms and scenarios.

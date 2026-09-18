@@ -1,6 +1,6 @@
 # Source diagnostics test plan
 
-Este roteiro ajuda a separar indisponibilidade da source de bug no GoAnime.
+Este roteiro ajuda a separar indisponibilidade da source de bug no GonimeId.
 
 ## Objetivo
 

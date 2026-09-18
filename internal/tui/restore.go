@@ -88,7 +88,7 @@ func ClearViewport(w io.Writer, height int) {
 
 // ClearViewportStdout clears the visible screen on stdout (preserving
 // scrollback) using the real terminal height when available. Used by the exit
-// cleanup so GoAnime always hands the shell a clean screen, as leftover TUI
+// cleanup so GonimeId always hands the shell a clean screen, as leftover TUI
 // frames otherwise pollute the next prompt.
 func ClearViewportStdout() {
 	height := 0

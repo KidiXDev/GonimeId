@@ -56,8 +56,8 @@ import (
 func main() {
     client := gonimeid.NewClient()
 
-    // Search only in AllAnime
-    source := types.SourceAllAnime
+    // Search one source only
+    source := types.SourceOtakudesu
     results, err := client.SearchAnime("Naruto", &source)
     if err != nil {
         log.Fatal(err)
@@ -162,7 +162,7 @@ func main() {
     }
 
     // Get stream URL for first episode using the recommended method
-    // This properly handles AllAnime and AnimeFire sources
+    // Works for every registered source
     streamURL, metadata, err := client.GetEpisodeStreamURL(anime, episodes[0], &gonimeid.StreamOptions{
         Quality: "best", // Options: "best", "worst", "1080p", "720p", "480p", "360p"
         Mode:    "sub",  // Options: "sub" (subtitled), "dub" (dubbed)
@@ -328,8 +328,8 @@ Returns a list of all available scraper sources.
 
 #### `types.Source`
 
-- `types.SourceAllAnime` - AllAnime source
-- `types.SourceOtakudesu` - AnimeFire source
+- `types.SourceOtakudesu` - Otakudesu
+- `types.SourceSamehadaku` - Samehadaku
 
 #### `types.Anime`
 Represents an anime with properties like Name, URL, ImageURL, Episodes, AnilistID, etc.

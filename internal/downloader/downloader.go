@@ -14,12 +14,12 @@ import (
 
 	"charm.land/bubbles/v2/progress"
 	tea "charm.land/bubbletea/v2"
-	"github.com/alvarorichard/Goanime/internal/api"
-	"github.com/alvarorichard/Goanime/internal/api/providers/metadata"
-	"github.com/alvarorichard/Goanime/internal/models"
-	"github.com/alvarorichard/Goanime/internal/player"
-	"github.com/alvarorichard/Goanime/internal/tui"
-	"github.com/alvarorichard/Goanime/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/api"
+	"github.com/KidiXDev/GonimeId/internal/api/providers/metadata"
+	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/player"
+	"github.com/KidiXDev/GonimeId/internal/tui"
+	"github.com/KidiXDev/GonimeId/internal/util"
 	"github.com/lrstanley/go-ytdlp"
 )
 
@@ -156,7 +156,7 @@ func NewEpisodeDownloaderWithAnime(episodes []models.Episode, animeURL string, a
 		// Fallback to URL-based directory for backward compatibility
 		userHome, _ := os.UserHomeDir()
 		safeAnimeName := strings.ReplaceAll(player.DownloadFolderFormatter(animeURL), " ", "_")
-		outputDir = filepath.Join(userHome, ".local", "goanime", "downloads", "anime", safeAnimeName)
+		outputDir = filepath.Join(userHome, ".local", "gonimeid", "downloads", "anime", safeAnimeName)
 	}
 
 	d := &EpisodeDownloader{

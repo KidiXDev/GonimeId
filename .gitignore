@@ -16,9 +16,9 @@ main
 result
 
 # Local build binaries
-goanime
-goanime-test
-build/goanime-local
+gonimeid
+gonimeid-test
+build/gonimeid-local
 
 #Ignore vscode AI rules
 .github/copilot-instructions.md

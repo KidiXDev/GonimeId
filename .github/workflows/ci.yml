@@ -133,7 +133,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $headers = @{ "User-Agent" = "GoAnime-CI" }
+          $headers = @{ "User-Agent" = "GonimeId-CI" }
           if ($env:GITHUB_TOKEN) { $headers["Authorization"] = "Bearer $env:GITHUB_TOKEN" }
           # mpv-winbuild publishes separate releases per arch, so /releases/latest
           # may be an aarch64-only release. Scan recent releases for the first
@@ -147,7 +147,7 @@ jobs:
           }
           if (-not $asset) { Write-Error "No x86_64 mpv asset found in the 15 most recent mpv-winbuild releases"; exit 1 }
           Write-Host "Downloading $($asset.name)..."
-          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile mpv.7z -Headers @{ "Accept"="application/octet-stream"; "User-Agent"="GoAnime-CI" }
+          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile mpv.7z -Headers @{ "Accept"="application/octet-stream"; "User-Agent"="GonimeId-CI" }
           7z x mpv.7z -ompv_tmp -y
           $mpvExe = Get-ChildItem -Path mpv_tmp -Recurse -Filter "mpv.exe" | Select-Object -First 1
           $mpvDir = $mpvExe.DirectoryName
@@ -229,23 +229,23 @@ jobs:
           - os: ubuntu-latest
             goos: linux
             goarch: amd64
-            binary_name: goanime-linux
-            asset_name: goanime-linux-amd64
+            binary_name: gonimeid-linux
+            asset_name: gonimeid-linux-amd64
           - os: windows-latest
             goos: windows
             goarch: amd64
-            binary_name: goanime.exe
-            asset_name: goanime-windows-amd64
+            binary_name: gonimeid.exe
+            asset_name: gonimeid-windows-amd64
           - os: macos-latest
             goos: darwin
             goarch: amd64
-            binary_name: goanime-darwin-amd64
-            asset_name: goanime-darwin-amd64
+            binary_name: gonimeid-darwin-amd64
+            asset_name: gonimeid-darwin-amd64
           - os: macos-latest
             goos: darwin
             goarch: arm64
-            binary_name: goanime-darwin-arm64
-            asset_name: goanime-darwin-arm64
+            binary_name: gonimeid-darwin-arm64
+            asset_name: gonimeid-darwin-arm64
     steps:
       - name: Check out code
         uses: actions/checkout@v7
@@ -266,7 +266,7 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
         run: |
           mkdir -p dist
-          go build -o dist/${{ matrix.binary_name }} -ldflags="-s -w" -trimpath ./cmd/goanime
+          go build -o dist/${{ matrix.binary_name }} -ldflags="-s -w" -trimpath ./cmd/gonimeid
 
       - name: Create archive (Unix)
         if: matrix.goos != 'windows'
@@ -352,7 +352,7 @@ jobs:
           gcc --version
           Write-Host "GCC available for CGO builds"
 
-      - name: Build GoAnime binary with SQLite
+      - name: Build GonimeId binary with SQLite
         shell: pwsh
         env:
           CGO_ENABLED: 1
@@ -367,9 +367,9 @@ jobs:
           New-Item -ItemType Directory -Force -Path "build/staging/bin"
           
           # Build the Go application with CGO enabled for SQLite support
-          go build -o build/staging/goanime.exe -ldflags="-s -w" -trimpath -tags="windows" ./cmd/goanime
+          go build -o build/staging/gonimeid.exe -ldflags="-s -w" -trimpath -tags="windows" ./cmd/gonimeid
           
-          Write-Host "GoAnime binary built successfully with SQLite support"
+          Write-Host "GonimeId binary built successfully with SQLite support"
           Get-ChildItem build/staging/
 
       - name: Download mpv for Windows
@@ -386,7 +386,7 @@ jobs:
           # mpv-winbuild publishes separate releases per arch, so /releases/latest
           # may be an aarch64-only release — scan recent releases for the first
           # one carrying an x86_64 build.
-          $headers = @{ "User-Agent" = "GoAnime-CI" }
+          $headers = @{ "User-Agent" = "GonimeId-CI" }
           if ($env:GITHUB_TOKEN) {
             $headers["Authorization"] = "Bearer $env:GITHUB_TOKEN"
           }
@@ -418,7 +418,7 @@ jobs:
           Write-Host "URL: $mpvUrl"
           
           # Download mpv archive from GitHub releases with proper headers
-          Invoke-WebRequest -Uri $mpvUrl -OutFile $mpvArchive -Headers @{ "Accept" = "application/octet-stream"; "User-Agent" = "GoAnime-CI" }
+          Invoke-WebRequest -Uri $mpvUrl -OutFile $mpvArchive -Headers @{ "Accept" = "application/octet-stream"; "User-Agent" = "GonimeId-CI" }
           
           # Verify download
           if (-not (Test-Path $mpvArchive) -or (Get-Item $mpvArchive).Length -lt 1000000) {
@@ -526,8 +526,8 @@ jobs:
       - name: Upload Windows Installer artifact
         uses: actions/upload-artifact@v7
         with:
-          name: goanime-windows-installer
+          name: gonimeid-windows-installer
           path: |
-            dist/GoAnime-Installer-*.exe
-            dist/GoAnime-Installer-*.sha256
+            dist/GonimeId-Installer-*.exe
+            dist/GonimeId-Installer-*.sha256
           retention-days: 30

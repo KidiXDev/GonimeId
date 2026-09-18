@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/alvarorichard/Goanime/internal/models"
-	"github.com/alvarorichard/Goanime/internal/tui"
+	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/tui"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -40,6 +40,8 @@ func TestEpisodeLabel(t *testing.T) {
 		{"with title", models.Episode{Number: "12", Title: models.TitleDetails{Romaji: "Pilot"}}, "12 — Pilot"},
 		{"number only", models.Episode{Number: "Episode 3"}, "Episode 3"},
 		{"english title", models.Episode{Number: "1", Title: models.TitleDetails{English: "Start"}}, "1 — Start"},
+		{"generic source title collapses", models.Episode{Number: "12", Title: models.TitleDetails{English: "Naruto Kecil Episode 12"}}, "Episode 12"},
+		{"generic title with other number is kept", models.Episode{Number: "12", Title: models.TitleDetails{English: "Recap Episode 1"}}, "12 — Recap Episode 1"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -191,8 +193,8 @@ func TestSelectEpisodeWithPicker_OptionsContract(t *testing.T) {
 	t.Parallel()
 	eps := []models.Episode{{Number: "7", URL: "u7", Title: models.TitleDetails{Romaji: "Seven"}}}
 	url, num, err := selectEpisodeWithPicker(func(items []tui.PickItem, opts tui.PickOptions) (int, error) {
-		assert.Equal(t, "Search > Episodes", opts.Breadcrumb)
-		assert.Equal(t, "GoAnime - Episodes", opts.WindowTitle)
+		assert.Equal(t, "Results › Episodes", opts.Breadcrumb)
+		assert.Equal(t, "GonimeId - Episodes", opts.WindowTitle)
 		assert.Equal(t, "episode", opts.ItemSingular)
 		assert.Equal(t, "episodes", opts.ItemPlural)
 		assert.Equal(t, "7 — Seven", items[0].Label)

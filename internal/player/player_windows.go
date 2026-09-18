@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/alvarorichard/Goanime/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/util"
 )
 
 func setProcessGroup(cmd *exec.Cmd) {
@@ -20,7 +20,7 @@ func setProcessGroup(cmd *exec.Cmd) {
 }
 
 // findMPVPath searches for mpv executable in PATH and common installation directories on Windows.
-// This function handles the case where mpv is installed via the GoAnime installer but
+// This function handles the case where mpv is installed via the GonimeId installer but
 // the PATH environment variable hasn't been updated yet (common in Windows Sandbox).
 func findMPVPath() (string, error) {
 	// First, try standard PATH lookup
@@ -31,13 +31,13 @@ func findMPVPath() (string, error) {
 	// List of common MPV installation paths on Windows
 	possiblePaths := []string{}
 
-	// Get the directory where goanime.exe is located
+	// Get the directory where gonimeid.exe is located
 	execPath, err := os.Executable()
 	if err == nil {
 		execDir := filepath.Dir(execPath)
-		// Check for bundled mpv in the same directory as goanime
+		// Check for bundled mpv in the same directory as gonimeid
 		possiblePaths = append(possiblePaths,
-			filepath.Join(execDir, "bin", "mpv.exe"), // Installed via GoAnime installer
+			filepath.Join(execDir, "bin", "mpv.exe"), // Installed via GonimeId installer
 			filepath.Join(execDir, "mpv.exe"),        // Portable installation
 		)
 	}
@@ -49,20 +49,20 @@ func findMPVPath() (string, error) {
 
 	if programFiles != "" {
 		possiblePaths = append(possiblePaths,
-			filepath.Join(programFiles, "GoAnime", "bin", "mpv.exe"),
+			filepath.Join(programFiles, "GonimeId", "bin", "mpv.exe"),
 			filepath.Join(programFiles, "mpv", "mpv.exe"),
 			filepath.Join(programFiles, "mpv.net", "mpv.exe"),
 		)
 	}
 	if programFilesX86 != "" {
 		possiblePaths = append(possiblePaths,
-			filepath.Join(programFilesX86, "GoAnime", "bin", "mpv.exe"),
+			filepath.Join(programFilesX86, "GonimeId", "bin", "mpv.exe"),
 			filepath.Join(programFilesX86, "mpv", "mpv.exe"),
 		)
 	}
 	if localAppData != "" {
 		possiblePaths = append(possiblePaths,
-			filepath.Join(localAppData, "Programs", "GoAnime", "bin", "mpv.exe"),
+			filepath.Join(localAppData, "Programs", "GonimeId", "bin", "mpv.exe"),
 		)
 	}
 

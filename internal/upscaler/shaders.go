@@ -13,7 +13,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/alvarorichard/Goanime/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/util"
 )
 
 // shaderHTTPClient is the ONLY client used to fetch shader assets. Its
@@ -140,7 +140,7 @@ func GetShaderDir() string {
 		home, _ := os.UserHomeDir()
 		configDir = home
 	}
-	return filepath.Join(configDir, "goanime", shaderDirName)
+	return filepath.Join(configDir, "gonimeid", shaderDirName)
 }
 
 // ShadersInstalled checks if Anime4K shaders are installed
@@ -448,7 +448,7 @@ func GetMPVShaderArgs(mode ShaderMode) []string {
 		// Recommended for very low resolution anime (360p, 480p)
 		// WARNING: Very heavy shaders, requires powerful GPU!
 		if !GANShadersInstalled() {
-			util.Warn("GAN UUL shaders not installed. Run 'goanime --upscale-install-gan' first.")
+			util.Warn("GAN UUL shaders not installed. Run 'gonimeid --upscale-install-gan' first.")
 			return nil
 		}
 		shaders = []string{

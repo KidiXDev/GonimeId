@@ -22,15 +22,15 @@ import (
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/progress"
 	tea "charm.land/bubbletea/v2"
-	"github.com/alvarorichard/Goanime/internal/api"
-	"github.com/alvarorichard/Goanime/internal/api/providers/metadata"
-	"github.com/alvarorichard/Goanime/internal/discord"
-	"github.com/alvarorichard/Goanime/internal/downloader/hls"
-	"github.com/alvarorichard/Goanime/internal/models"
-	"github.com/alvarorichard/Goanime/internal/tui"
-	"github.com/alvarorichard/Goanime/internal/upscaler"
-	"github.com/alvarorichard/Goanime/internal/util"
-	"github.com/alvarorichard/Goanime/internal/util/jsonx"
+	"github.com/KidiXDev/GonimeId/internal/api"
+	"github.com/KidiXDev/GonimeId/internal/api/providers/metadata"
+	"github.com/KidiXDev/GonimeId/internal/discord"
+	"github.com/KidiXDev/GonimeId/internal/downloader/hls"
+	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/tui"
+	"github.com/KidiXDev/GonimeId/internal/upscaler"
+	"github.com/KidiXDev/GonimeId/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/util/jsonx"
 	"github.com/pkg/errors"
 	"golang.org/x/term"
 )
@@ -438,12 +438,12 @@ func StartVideo(link string, args []string) (string, error) {
 		if len(pipeID) > 16 {
 			pipeID = pipeID[:16]
 		}
-		socketPath = fmt.Sprintf(`\\.\pipe\goanime_mpv_%s`, pipeID)
+		socketPath = fmt.Sprintf(`\\.\pipe\gonimeid_mpv_%s`, pipeID)
 	} else {
 		// Use os.TempDir() for cross-platform compatibility
 		// macOS uses /var/folders/... accessed via $TMPDIR
 		// filepath.Join handles trailing slashes correctly (fixes macOS double-slash issue)
-		socketPath = filepath.Join(os.TempDir(), fmt.Sprintf("goanime_mpvsocket_%s", randomNumber))
+		socketPath = filepath.Join(os.TempDir(), fmt.Sprintf("gonimeid_mpvsocket_%s", randomNumber))
 	}
 
 	mpvArgs := []string{
@@ -556,7 +556,7 @@ func formatMPVEarlyExitError(waitErr error, stderrOut, mpvPath string) error {
 	stderrOut = strings.TrimSpace(stderrOut)
 	util.Debugf("mpv exited before IPC socket was ready: %v stderr=%q path=%s", waitErr, stderrOut, mpvPath)
 	if stderrOut != "" {
-		return fmt.Errorf("mpv exited before IPC socket was ready: %v\nmpv stderr: %s\nmpv path: %s\nHint: on Windows VMs OpenGL often fails — GoAnime uses a VO fallback chain; if this persists, reinstall mpv or run mpv manually", waitErr, stderrOut, mpvPath)
+		return fmt.Errorf("mpv exited before IPC socket was ready: %v\nmpv stderr: %s\nmpv path: %s\nHint: on Windows VMs OpenGL often fails — GonimeId uses a VO fallback chain; if this persists, reinstall mpv or run mpv manually", waitErr, stderrOut, mpvPath)
 	}
 	return fmt.Errorf("mpv exited before IPC socket was ready: %v\nmpv path: %s (no stderr captured)\nHint: bundled mpv may be missing DLLs, or video output failed. Run: \"%s\" --version", waitErr, mpvPath, mpvPath)
 }
@@ -1013,7 +1013,7 @@ func downloadAndPlayEpisode(
 		if snap.IsMovieOrTV {
 			fallbackBase = util.DefaultMovieDownloadDir()
 		} else {
-			fallbackBase = filepath.Join(currentUser.HomeDir, ".local", "goanime", "downloads", "anime")
+			fallbackBase = filepath.Join(currentUser.HomeDir, ".local", "gonimeid", "downloads", "anime")
 		}
 		downloadPath = filepath.Join(fallbackBase, DownloadFolderFormatter(animeURL))
 		episodePath = filepath.Join(downloadPath, episodeNumberStr+".mp4")
@@ -1144,8 +1144,6 @@ func downloadAndPlayEpisode(
 				// SharePoint URLs (.aspx) may serve HLS or direct video; yt-dlp rejects the extension.
 				var dlErr error
 				switch {
-				case isSuperFlixTextHLS(videoURL):
-					dlErr = downloadWithFFmpegHLS(videoURL, episodePath, m)
 				case LooksLikeHLS(videoURL) || hasUnsafeExtension(videoURL):
 					dlErr = downloadWithNativeHLS(videoURL, episodePath, m)
 					if dlErr != nil && stderrors.Is(dlErr, hls.ErrSeparateAudioTracks) {
@@ -1316,19 +1314,21 @@ func askForDownload() int {
 	}
 	// Build the upscale option label with current status
 	upscaleStatus := upscaler.GetShaderModeName(upscaler.GetShaderMode())
-	upscaleLabel := fmt.Sprintf("Real-time Upscale [%s]", upscaleStatus)
+	upscaleLabel := fmt.Sprintf("Anime4K upscaling: %s", upscaleStatus)
 
 	type menuOption struct {
 		Label string
 		Value string
 	}
+	// Play is first and preselected: Enter plays. Esc is the only way back —
+	// a "← Back" row as the default meant Enter after picking an episode
+	// silently returned to the episode list.
 	items := []menuOption{
-		{"← Back", "back"},
-		{"Download ALL episodes", "download_all"},
+		{"Play", "play_online"},
 		{"Download this episode", "download_single"},
-		{"Download episodes in a range", "download_range"},
+		{"Download a range of episodes", "download_range"},
+		{"Download all episodes", "download_all"},
 		{upscaleLabel, "upscale"},
-		{"No download (play online)", "play_online"},
 	}
 
 	labels := make([]string, len(items))
@@ -1336,8 +1336,8 @@ func askForDownload() int {
 		labels[i] = it.Label
 	}
 	idx, err := tui.PickLabels(labels, tui.PickOptions{
-		Breadcrumb:   "Playback > Download",
-		WindowTitle:  "GoAnime - Download",
+		Breadcrumb:   "Episodes › Play",
+		WindowTitle:  "GonimeId - Play",
 		ItemSingular: "option",
 		ItemPlural:   "options",
 	})
@@ -1372,7 +1372,7 @@ func askForPlayOffline() bool {
 	}
 	idx, err := tui.PickLabels([]string{"Yes", "No"}, tui.PickOptions{
 		Breadcrumb:   "Playback > Offline",
-		WindowTitle:  "GoAnime - Play Offline",
+		WindowTitle:  "GonimeId - Play Offline",
 		ItemSingular: "option",
 		ItemPlural:   "options",
 	})
@@ -1603,7 +1603,7 @@ func handleUpscaleFromMenu() error {
 	}
 	idx, err := tui.PickLabels(labels, tui.PickOptions{
 		Breadcrumb:   tui.SingleLine(strings.TrimSuffix(prompt, ": ")),
-		WindowTitle:  "GoAnime - Upscale",
+		WindowTitle:  "GonimeId - Upscale",
 		ItemSingular: "mode",
 		ItemPlural:   "modes",
 	})

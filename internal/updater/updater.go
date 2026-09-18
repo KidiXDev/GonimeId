@@ -16,10 +16,10 @@ import (
 	"time"
 
 	"charm.land/huh/v2"
-	"github.com/alvarorichard/Goanime/internal/tui"
-	"github.com/alvarorichard/Goanime/internal/util"
-	"github.com/alvarorichard/Goanime/internal/util/jsonx"
-	"github.com/alvarorichard/Goanime/internal/version"
+	"github.com/KidiXDev/GonimeId/internal/tui"
+	"github.com/KidiXDev/GonimeId/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/util/jsonx"
+	"github.com/KidiXDev/GonimeId/internal/version"
 )
 
 // maxJSONResponseBytes caps how much of an HTTP response jsonx.Decode will read
@@ -29,8 +29,8 @@ import (
 const maxJSONResponseBytes = 10 << 20 // 10 MiB
 
 const (
-	GitHubOwner = "alvarorichard"
-	GitHubRepo  = "GoAnime"
+	GitHubOwner = "KidiXDev"
+	GitHubRepo  = "GonimeId"
 	GitHubAPI   = "https://api.github.com/repos/" + GitHubOwner + "/" + GitHubRepo
 )
 
@@ -195,7 +195,7 @@ func extractExecutableFromZipAsset(zipPath string) (executablePath string, clean
 		if strings.Contains(lower, "installer") {
 			return false
 		}
-		return strings.HasPrefix(lower, "goanime")
+		return strings.HasPrefix(lower, "gonimeid")
 	}
 
 	isFallbackExe := func(name string) bool {
@@ -234,7 +234,7 @@ func extractExecutableFromZipAsset(zipPath string) (executablePath string, clean
 		return "", nil, fmt.Errorf("no portable executable found in zip asset")
 	}
 
-	tempDir, err := os.MkdirTemp("", "goanime-update-extract-")
+	tempDir, err := os.MkdirTemp("", "gonimeid-update-extract-")
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to create extraction directory: %w", err)
 	}
@@ -308,7 +308,7 @@ func PromptForUpdate(release *GitHubRelease) (bool, error) {
 		huh.NewGroup(
 			huh.NewNote().
 				Title("🚀 Update Available").
-				Description(fmt.Sprintf("A new version of GoAnime is available!\n\n"+
+				Description(fmt.Sprintf("A new version of GonimeId is available!\n\n"+
 					"Current version: %s\n"+
 					"Latest version: %s\n\n"+
 					"Release notes:\n%s",
@@ -442,24 +442,24 @@ func findAssetForPlatformWithInfo(release *GitHubRelease, platform PlatformInfo)
 	switch platform.OS {
 	case "windows":
 		expectedNames = []string{
-			fmt.Sprintf("goanime-windows-%s.exe", platform.Arch),
-			fmt.Sprintf("goanime-windows-%s.zip", platform.Arch), // Also check zip files
-			"goanime-windows.exe",
-			"goanime.exe",
+			fmt.Sprintf("gonimeid-windows-%s.exe", platform.Arch),
+			fmt.Sprintf("gonimeid-windows-%s.zip", platform.Arch), // Also check zip files
+			"gonimeid-windows.exe",
+			"gonimeid.exe",
 		}
 	case "darwin":
 		expectedNames = []string{
-			fmt.Sprintf("goanime-darwin-%s", platform.Arch),
-			fmt.Sprintf("goanime-macos-%s", platform.Arch),
-			"goanime-darwin-universal", // Universal binary (explicit)
-			"goanime-darwin",           // Universal binary (generic) or fallback
-			"goanime-macos",            // Alternative generic name
+			fmt.Sprintf("gonimeid-darwin-%s", platform.Arch),
+			fmt.Sprintf("gonimeid-macos-%s", platform.Arch),
+			"gonimeid-darwin-universal", // Universal binary (explicit)
+			"gonimeid-darwin",           // Universal binary (generic) or fallback
+			"gonimeid-macos",            // Alternative generic name
 		}
 	case "linux":
 		expectedNames = []string{
-			fmt.Sprintf("goanime-linux-%s", platform.Arch),
-			"goanime-linux",
-			"goanime",
+			fmt.Sprintf("gonimeid-linux-%s", platform.Arch),
+			"gonimeid-linux",
+			"gonimeid",
 		}
 	default:
 		return "", "", fmt.Errorf("unsupported platform: %s", platform.OS)
@@ -546,7 +546,7 @@ func safeTempFile(filename string) (string, error) {
 	}
 
 	tempDir := os.TempDir()
-	tempFile := filepath.Join(tempDir, "goanime-update-"+filename)
+	tempFile := filepath.Join(tempDir, "gonimeid-update-"+filename)
 
 	// Validate the resulting path
 	if err := validateFilePath(tempFile); err != nil {
@@ -748,11 +748,11 @@ func createWindowsUpdateScript(currentExe, newExe string) error {
 	// 3. Clean up the temporary files
 	// 4. Restart the application (optional)
 
-	scriptPath := filepath.Join(filepath.Dir(currentExe), "update_goanime.bat")
+	scriptPath := filepath.Join(filepath.Dir(currentExe), "update_gonimeid.bat")
 
 	// Create the batch script content
 	scriptContent := fmt.Sprintf(`@echo off
-echo Updating GoAnime...
+echo Updating GonimeId...
 timeout /t 2 /nobreak > nul
 :WAIT
 tasklist /FI "PID eq %d" 2>NUL | find /I /N "%d">NUL

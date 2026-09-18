@@ -3,15 +3,15 @@ package source
 import (
 	"slices"
 
-	"github.com/alvarorichard/Goanime/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/util"
 )
 
 // Source enablement (ARCHITECTURE.md §7 S1 — manual kill-switch).
 //
 // A registered source still participates in resolution ONLY if it is enabled.
 // Disabling is a config decision (no rebuild): a source is off when it is
-// listed in GOANIME_DISABLED_SOURCES, or when its Descriptor is DefaultDisabled
-// and it was NOT opted in via GOANIME_ENABLED_SOURCES. The explicit-list
+// listed in GONIMEID_DISABLED_SOURCES, or when its Descriptor is DefaultDisabled
+// and it was NOT opted in via GONIMEID_ENABLED_SOURCES. The explicit-list
 // parsing lives in util so the search layer honors the same switch without an
 // import cycle (see util.SourceDisabled).
 

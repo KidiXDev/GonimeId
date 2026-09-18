@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alvarorichard/Goanime/internal/tui"
+	"github.com/KidiXDev/GonimeId/internal/tui"
 	"github.com/charmbracelet/colorprofile"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,7 +21,7 @@ func containsANSI(s string) bool {
 }
 
 // TestPrefixForProfile_ASCII_NoEscapeCodes is the hard regression for the
-// "←[48;2;99;102;241mGoAnime" garbage on Windows cmd.exe without VT.
+// "←[48;2;99;102;241mGonimeId" garbage on Windows cmd.exe without VT.
 func TestPrefixForProfile_ASCII_NoEscapeCodes(t *testing.T) {
 	t.Parallel()
 	for _, p := range []colorprofile.Profile{
@@ -31,7 +31,7 @@ func TestPrefixForProfile_ASCII_NoEscapeCodes(t *testing.T) {
 		t.Run(p.String(), func(t *testing.T) {
 			t.Parallel()
 			got := prefixForProfile(p)
-			assert.Equal(t, "GoAnime", got)
+			assert.Equal(t, "GonimeId", got)
 			assert.False(t, containsANSI(got), "ASCII/NoTTY prefix must be plain text, got %q", got)
 		})
 	}
@@ -42,9 +42,9 @@ func TestPrefixForProfile_ASCII_NoEscapeCodes(t *testing.T) {
 func TestPrefixForProfile_Color_MayUseANSI(t *testing.T) {
 	t.Parallel()
 	got := prefixForProfile(colorprofile.TrueColor)
-	assert.Contains(t, got, "GoAnime")
+	assert.Contains(t, got, "GonimeId")
 	// TrueColor profile is allowed to embed SGR; that's intentional.
-	assert.True(t, containsANSI(got) || got == "GoAnime",
+	assert.True(t, containsANSI(got) || got == "GonimeId",
 		"TrueColor path should style or at least include the name")
 }
 
@@ -86,7 +86,7 @@ func TestInitLogger_UsesSafeProfile_NoHardcodedTrueColor(t *testing.T) {
 // that previously dumped TrueColor into cmd.exe (see user screenshots).
 func TestShowDebugBanner_PlainWhenANSIUnsupported(t *testing.T) {
 	snapshotLogger(t)
-	LogFilePath = `C:\Users\Usuario\AppData\Local\GoAnime\logs\goanime_test.log`
+	LogFilePath = `C:\Users\Usuario\AppData\Local\GonimeId\logs\gonimeid_test.log`
 
 	origStderr := os.Stderr
 	r, w, err := os.Pipe()

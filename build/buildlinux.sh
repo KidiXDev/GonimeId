@@ -5,17 +5,17 @@ set -e
 
 # Variables
 OUTPUT_DIR="../build"  # Adjusted to place the binary in the build directory
-BINARY_NAME="goanime-linux"
+BINARY_NAME="gonimeid-linux"
 BINARY_PATH="$OUTPUT_DIR/$BINARY_NAME"
 TARBALL_NAME="$BINARY_NAME.tar.gz"
 TARBALL_PATH="$OUTPUT_DIR/$TARBALL_NAME"
 CHECKSUM_FILE="$TARBALL_PATH.sha256"
-MAIN_PACKAGE="../cmd/goanime"
+MAIN_PACKAGE="../cmd/gonimeid"
 
 # Create the output directory if it doesn't exist
 mkdir -p "$OUTPUT_DIR"
 
-echo "Building the goanime binary for Linux..."
+echo "Building the gonimeid binary for Linux..."
 # For Linux we don't need go-winio, using !windows tag to ensure it's excluded
 # With CGO_ENABLED=0, SQLite will be compiled without native support
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o "$BINARY_PATH" -ldflags="-s -w" -trimpath -tags="!windows" "$MAIN_PACKAGE"

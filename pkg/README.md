@@ -1,4 +1,4 @@
-# GoAnime Public API
+# GonimeId Public API
 
 [![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go)](https://golang.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE)
@@ -7,7 +7,7 @@ A clean and simple Go library for searching and scraping anime content from mult
 
 ## Features
 
-- **Multi-source Search**: Search across multiple anime sources (AllAnime, AnimeFire, etc.)
+- **Multi-source Search**: Search across multiple anime sources (Otakudesu, Samehadaku)
 - **Episode Management**: Get detailed episode lists with metadata
 - **Stream URLs**: Extract streaming URLs and required headers
 - **Rich Metadata**: Access AniList IDs, MAL IDs, genres, scores, and more
@@ -18,7 +18,7 @@ A clean and simple Go library for searching and scraping anime content from mult
 ## Installation
 
 ```bash
-go get github.com/alvarorichard/Goanime
+go get github.com/KidiXDev/GonimeId
 ```
 
 ## Quick Start
@@ -30,12 +30,12 @@ import (
     "fmt"
     "log"
 
-    "github.com/alvarorichard/Goanime/pkg/goanime"
+    "github.com/KidiXDev/GonimeId/pkg/gonimeid"
 )
 
 func main() {
     // Create a new client
-    client := goanime.NewClient()
+    client := gonimeid.NewClient()
 
     // Search for anime
     results, err := client.SearchAnime("One Piece", nil)
@@ -55,7 +55,7 @@ func main() {
 ### 1. Search Anime
 
 ```go
-client := goanime.NewClient()
+client := gonimeid.NewClient()
 
 // Search all sources
 results, _ := client.SearchAnime("Naruto", nil)
@@ -68,7 +68,7 @@ results, _ := client.SearchAnime("Naruto", &source)
 ### 2. Get Episodes
 
 ```go
-client := goanime.NewClient()
+client := gonimeid.NewClient()
 
 // Search and get anime
 results, _ := client.SearchAnime("Attack on Titan", nil)
@@ -88,7 +88,7 @@ for _, ep := range episodes {
 ### 3. Get Stream URL
 
 ```go
-client := goanime.NewClient()
+client := gonimeid.NewClient()
 
 // ... get anime and episodes as above ...
 
@@ -105,7 +105,7 @@ fmt.Printf("Headers: %v\n", headers)
 ### 4. Available Sources
 
 ```go
-client := goanime.NewClient()
+client := gonimeid.NewClient()
 
 sources := client.GetAvailableSources()
 for _, source := range sources {
@@ -168,7 +168,7 @@ type Episode struct {
 Available sources:
 
 - `types.SourceAllAnime` - AllAnime source
-- `types.SourceAnimeFire` - AnimeFire source
+- `types.SourceOtakudesu` - AnimeFire source
 
 **Methods:**
 
@@ -180,15 +180,15 @@ Available sources:
 
 Complete working examples are available in the `examples/` directory:
 
-- [`search/`](goanime/examples/search/main.go) - Basic anime search
-- [`episodes/`](goanime/examples/episodes/main.go) - Get episode list
-- [`stream/`](goanime/examples/stream/main.go) - Get streaming URL
-- [`source_specific/`](goanime/examples/source_specific/main.go) - Search specific sources
+- [`search/`](gonimeid/examples/search/main.go) - Basic anime search
+- [`episodes/`](gonimeid/examples/episodes/main.go) - Get episode list
+- [`stream/`](gonimeid/examples/stream/main.go) - Get streaming URL
+- [`source_specific/`](gonimeid/examples/source_specific/main.go) - Search specific sources
 
 To run an example:
 
 ```bash
-go run ./pkg/goanime/examples/search/main.go
+go run ./pkg/gonimeid/examples/search/main.go
 ```
 
 ## Advanced Usage
@@ -272,9 +272,9 @@ defer resp.Body.Close()
 
 For detailed documentation, see:
 
-- [Complete API Documentation](goanime/README.md)
-- [Code Examples](goanime/examples/)
-- [GoDoc](https://pkg.go.dev/github.com/alvarorichard/Goanime/pkg/goanime)
+- [Complete API Documentation](gonimeid/README.md)
+- [Code Examples](gonimeid/examples/)
+- [GoDoc](https://pkg.go.dev/github.com/KidiXDev/GonimeId/pkg/gonimeid)
 
 ## Contributing
 
@@ -298,5 +298,5 @@ MIT License - see [LICENSE](../../LICENSE) for details
 
 ## Related Projects
 
-- [GoAnime CLI](../../) - Full-featured CLI application using this library
+- [GonimeId CLI](../../) - Full-featured CLI application using this library
 - Main project documentation in the [root README](../../README.md)

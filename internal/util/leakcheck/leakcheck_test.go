@@ -6,7 +6,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/alvarorichard/Goanime/internal/util/leakcheck"
+	"github.com/KidiXDev/GonimeId/internal/util/leakcheck"
 )
 
 // TestCheckerDetectsARealLeak is the self-test that keeps the CI gate honest: a

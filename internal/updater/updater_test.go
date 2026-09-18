@@ -45,12 +45,12 @@ var mockRelease = GitHubRelease{
 		Name               string `json:"name"`
 		BrowserDownloadURL string `json:"browser_download_url"`
 	}{
-		{Name: "goanime-linux-amd64", BrowserDownloadURL: "http://example.com/goanime-linux-amd64"},
-		{Name: "goanime-windows-amd64.exe", BrowserDownloadURL: "http://example.com/goanime-windows-amd64.exe"},
-		{Name: "goanime-darwin-amd64", BrowserDownloadURL: "http://example.com/goanime-darwin-amd64"},
-		{Name: "goanime-darwin-arm64", BrowserDownloadURL: "http://example.com/goanime-darwin-arm64"},
-		{Name: "goanime-darwin-universal", BrowserDownloadURL: "http://example.com/goanime-darwin-universal"},
-		{Name: "goanime-darwin", BrowserDownloadURL: "http://example.com/goanime-darwin"},
+		{Name: "gonimeid-linux-amd64", BrowserDownloadURL: "http://example.com/gonimeid-linux-amd64"},
+		{Name: "gonimeid-windows-amd64.exe", BrowserDownloadURL: "http://example.com/gonimeid-windows-amd64.exe"},
+		{Name: "gonimeid-darwin-amd64", BrowserDownloadURL: "http://example.com/gonimeid-darwin-amd64"},
+		{Name: "gonimeid-darwin-arm64", BrowserDownloadURL: "http://example.com/gonimeid-darwin-arm64"},
+		{Name: "gonimeid-darwin-universal", BrowserDownloadURL: "http://example.com/gonimeid-darwin-universal"},
+		{Name: "gonimeid-darwin", BrowserDownloadURL: "http://example.com/gonimeid-darwin"},
 	},
 }
 
@@ -172,25 +172,25 @@ func TestFindAssetForPlatform(t *testing.T) {
 		{
 			name:         "linux amd64",
 			platform:     PlatformInfo{OS: "linux", Arch: "amd64"},
-			expectedName: "goanime-linux-amd64",
+			expectedName: "gonimeid-linux-amd64",
 			hasError:     false,
 		},
 		{
 			name:         "windows amd64",
 			platform:     PlatformInfo{OS: "windows", Arch: "amd64"},
-			expectedName: "goanime-windows-amd64.exe",
+			expectedName: "gonimeid-windows-amd64.exe",
 			hasError:     false,
 		},
 		{
 			name:         "darwin amd64",
 			platform:     PlatformInfo{OS: "darwin", Arch: "amd64"},
-			expectedName: "goanime-darwin-amd64",
+			expectedName: "gonimeid-darwin-amd64",
 			hasError:     false,
 		},
 		{
 			name:         "darwin arm64",
 			platform:     PlatformInfo{OS: "darwin", Arch: "arm64"},
-			expectedName: "goanime-darwin-arm64",
+			expectedName: "gonimeid-darwin-arm64",
 			hasError:     false,
 		},
 	}
@@ -351,14 +351,14 @@ func TestCheckForUpdates_BugReproduction(t *testing.T) {
 	// Simulate the GitHub API response for v1.8.1 release
 	releaseV181 := GitHubRelease{
 		TagName: "v1.8.1",
-		Name:    "GoAnime v1.8.1",
+		Name:    "GonimeId v1.8.1",
 		Body:    "Bug fix release",
 		Assets: []struct {
 			Name               string `json:"name"`
 			BrowserDownloadURL string `json:"browser_download_url"`
 		}{
-			{Name: "goanime-linux-amd64", BrowserDownloadURL: "http://example.com/goanime-linux-amd64"},
-			{Name: "goanime-darwin-arm64", BrowserDownloadURL: "http://example.com/goanime-darwin-arm64"},
+			{Name: "gonimeid-linux-amd64", BrowserDownloadURL: "http://example.com/gonimeid-linux-amd64"},
+			{Name: "gonimeid-darwin-arm64", BrowserDownloadURL: "http://example.com/gonimeid-darwin-arm64"},
 		},
 	}
 
@@ -411,7 +411,7 @@ func TestCheckForUpdates_BugReproduction(t *testing.T) {
 func TestCheckForUpdates_SameVersion(t *testing.T) {
 	releaseV181 := GitHubRelease{
 		TagName: "v1.8.1",
-		Name:    "GoAnime v1.8.1",
+		Name:    "GonimeId v1.8.1",
 		Body:    "Current release",
 	}
 
@@ -448,13 +448,13 @@ func TestCheckForUpdates_SameVersion(t *testing.T) {
 func TestCheckForUpdates_NewerVersionAvailable(t *testing.T) {
 	releaseV200 := GitHubRelease{
 		TagName: "v2.0.0",
-		Name:    "GoAnime v2.0.0",
+		Name:    "GonimeId v2.0.0",
 		Body:    "Major release",
 		Assets: []struct {
 			Name               string `json:"name"`
 			BrowserDownloadURL string `json:"browser_download_url"`
 		}{
-			{Name: "goanime-linux-amd64", BrowserDownloadURL: "http://example.com/goanime-linux-amd64"},
+			{Name: "gonimeid-linux-amd64", BrowserDownloadURL: "http://example.com/gonimeid-linux-amd64"},
 		},
 	}
 
@@ -486,7 +486,7 @@ func TestCheckForUpdates_NewerVersionAvailable(t *testing.T) {
 func TestCheckForUpdates_CurrentIsNewer(t *testing.T) {
 	releaseV180 := GitHubRelease{
 		TagName: "v1.8.0",
-		Name:    "GoAnime v1.8.0",
+		Name:    "GonimeId v1.8.0",
 		Body:    "Old release",
 	}
 
@@ -566,19 +566,19 @@ func TestCheckForUpdates_FullFlowEndToEnd(t *testing.T) {
 	// Simulate a realistic GitHub release response matching the actual v1.8.1 structure
 	realisticRelease := GitHubRelease{
 		TagName: "v1.8.1",
-		Name:    "GoAnime v1.8.1",
-		Body:    "# GoAnime Release Notes - Version 1.8.1\n\nNew PT-BR sources, Jellyfin compatibility, and more.",
+		Name:    "GonimeId v1.8.1",
+		Body:    "# GonimeId Release Notes - Version 1.8.1\n\nNew PT-BR sources, Jellyfin compatibility, and more.",
 		Assets: []struct {
 			Name               string `json:"name"`
 			BrowserDownloadURL string `json:"browser_download_url"`
 		}{
-			{Name: "goanime-linux-amd64", BrowserDownloadURL: "https://github.com/alvarorichard/GoAnime/releases/download/v1.8.1/goanime-linux-amd64"},
-			{Name: "goanime-linux-arm64", BrowserDownloadURL: "https://github.com/alvarorichard/GoAnime/releases/download/v1.8.1/goanime-linux-arm64"},
-			{Name: "goanime-darwin-amd64", BrowserDownloadURL: "https://github.com/alvarorichard/GoAnime/releases/download/v1.8.1/goanime-darwin-amd64"},
-			{Name: "goanime-darwin-arm64", BrowserDownloadURL: "https://github.com/alvarorichard/GoAnime/releases/download/v1.8.1/goanime-darwin-arm64"},
-			{Name: "goanime-windows-amd64.zip", BrowserDownloadURL: "https://github.com/alvarorichard/GoAnime/releases/download/v1.8.1/goanime-windows-amd64.zip"},
-			{Name: "GoAnime-Installer-1.8.1.exe", BrowserDownloadURL: "https://github.com/alvarorichard/GoAnime/releases/download/v1.8.1/GoAnime-Installer-1.8.1.exe"},
-			{Name: "checksums-sha256.txt", BrowserDownloadURL: "https://github.com/alvarorichard/GoAnime/releases/download/v1.8.1/checksums-sha256.txt"},
+			{Name: "gonimeid-linux-amd64", BrowserDownloadURL: "https://github.com/KidiXDev/GonimeId/releases/download/v1.8.1/gonimeid-linux-amd64"},
+			{Name: "gonimeid-linux-arm64", BrowserDownloadURL: "https://github.com/KidiXDev/GonimeId/releases/download/v1.8.1/gonimeid-linux-arm64"},
+			{Name: "gonimeid-darwin-amd64", BrowserDownloadURL: "https://github.com/KidiXDev/GonimeId/releases/download/v1.8.1/gonimeid-darwin-amd64"},
+			{Name: "gonimeid-darwin-arm64", BrowserDownloadURL: "https://github.com/KidiXDev/GonimeId/releases/download/v1.8.1/gonimeid-darwin-arm64"},
+			{Name: "gonimeid-windows-amd64.zip", BrowserDownloadURL: "https://github.com/KidiXDev/GonimeId/releases/download/v1.8.1/gonimeid-windows-amd64.zip"},
+			{Name: "GonimeId-Installer-1.8.1.exe", BrowserDownloadURL: "https://github.com/KidiXDev/GonimeId/releases/download/v1.8.1/GonimeId-Installer-1.8.1.exe"},
+			{Name: "checksums-sha256.txt", BrowserDownloadURL: "https://github.com/KidiXDev/GonimeId/releases/download/v1.8.1/checksums-sha256.txt"},
 		},
 	}
 
@@ -598,7 +598,7 @@ func TestCheckForUpdates_FullFlowEndToEnd(t *testing.T) {
 
 	// Step 2: Verify release metadata is correctly parsed
 	assert.Equal(t, "v1.8.1", release.TagName)
-	assert.Equal(t, "GoAnime v1.8.1", release.Name)
+	assert.Equal(t, "GonimeId v1.8.1", release.Name)
 	assert.Contains(t, release.Body, "Release Notes")
 
 	// Step 3: Verify all platform assets are available
@@ -609,11 +609,11 @@ func TestCheckForUpdates_FullFlowEndToEnd(t *testing.T) {
 		platform     PlatformInfo
 		expectedName string
 	}{
-		{PlatformInfo{OS: "linux", Arch: "amd64"}, "goanime-linux-amd64"},
-		{PlatformInfo{OS: "linux", Arch: "arm64"}, "goanime-linux-arm64"},
-		{PlatformInfo{OS: "darwin", Arch: "amd64"}, "goanime-darwin-amd64"},
-		{PlatformInfo{OS: "darwin", Arch: "arm64"}, "goanime-darwin-arm64"},
-		{PlatformInfo{OS: "windows", Arch: "amd64"}, "goanime-windows-amd64.zip"},
+		{PlatformInfo{OS: "linux", Arch: "amd64"}, "gonimeid-linux-amd64"},
+		{PlatformInfo{OS: "linux", Arch: "arm64"}, "gonimeid-linux-arm64"},
+		{PlatformInfo{OS: "darwin", Arch: "amd64"}, "gonimeid-darwin-amd64"},
+		{PlatformInfo{OS: "darwin", Arch: "arm64"}, "gonimeid-darwin-arm64"},
+		{PlatformInfo{OS: "windows", Arch: "amd64"}, "gonimeid-windows-amd64.zip"},
 	}
 
 	for _, p := range platforms {
@@ -625,25 +625,25 @@ func TestCheckForUpdates_FullFlowEndToEnd(t *testing.T) {
 
 func TestExtractExecutableFromZipAsset_PrefersPortableBinary(t *testing.T) {
 	tempDir := t.TempDir()
-	zipPath := filepath.Join(tempDir, "goanime-windows-amd64.zip")
+	zipPath := filepath.Join(tempDir, "gonimeid-windows-amd64.zip")
 
 	createTestZip(t, zipPath, map[string]string{
-		"GoAnime-Installer-1.8.1.exe": "installer",
-		"goanime-windows-amd64.exe":   "portable",
+		"GonimeId-Installer-1.8.1.exe": "installer",
+		"gonimeid-windows-amd64.exe":   "portable",
 	})
 
 	exePath, cleanup, err := extractExecutableFromZipAsset(zipPath)
 	require.NoError(t, err)
 	t.Cleanup(cleanup)
 
-	assert.Equal(t, "goanime-windows-amd64.exe", filepath.Base(exePath))
+	assert.Equal(t, "gonimeid-windows-amd64.exe", filepath.Base(exePath))
 
 	content, readErr := os.ReadFile(exePath)
 	require.NoError(t, readErr)
 	assert.Equal(t, "portable", string(content))
 }
 
-func TestExtractExecutableFromZipAsset_FallbackWhenNameNotGoanime(t *testing.T) {
+func TestExtractExecutableFromZipAsset_FallbackWhenNameNotGonimeId(t *testing.T) {
 	tempDir := t.TempDir()
 	zipPath := filepath.Join(tempDir, "tool.zip")
 
@@ -700,7 +700,7 @@ func TestDownloadAsset_MockServer(t *testing.T) {
 
 	// Verify file exists in temp directory
 	assert.True(t, strings.Contains(tempFile, os.TempDir()))
-	assert.True(t, strings.Contains(tempFile, "goanime-update-"))
+	assert.True(t, strings.Contains(tempFile, "gonimeid-update-"))
 }
 
 func TestDownloadAsset_ServerError(t *testing.T) {
@@ -979,10 +979,10 @@ func TestUpdateWorkflow_MockScenario(t *testing.T) {
 	}
 
 	// Step 1: Set up mock GitHub API server
-	binaryContent := "#!/bin/sh\necho 'GoAnime v1.8.1'"
+	binaryContent := "#!/bin/sh\necho 'GonimeId v1.8.1'"
 	releaseV181 := GitHubRelease{
 		TagName: "v1.8.1",
-		Name:    "GoAnime v1.8.1",
+		Name:    "GonimeId v1.8.1",
 		Body:    "Update with bug fixes",
 	}
 
@@ -995,8 +995,8 @@ func TestUpdateWorkflow_MockScenario(t *testing.T) {
 				Name               string `json:"name"`
 				BrowserDownloadURL string `json:"browser_download_url"`
 			}{
-				{Name: "goanime-" + runtime.GOOS + "-" + runtime.GOARCH,
-					BrowserDownloadURL: "http://" + r.Host + "/download/goanime"},
+				{Name: "gonimeid-" + runtime.GOOS + "-" + runtime.GOARCH,
+					BrowserDownloadURL: "http://" + r.Host + "/download/gonimeid"},
 			}
 			w.Header().Set("Content-Type", "application/json")
 			if err := json.NewEncoder(w).Encode(releaseWithURL); err != nil {
@@ -1022,7 +1022,7 @@ func TestUpdateWorkflow_MockScenario(t *testing.T) {
 	// Step 3: Find the correct asset for this platform
 	_, assetName, err := findAssetForPlatformWithInfo(release, GetCurrentPlatform())
 	require.NoError(t, err)
-	assert.Contains(t, assetName, "goanime-")
+	assert.Contains(t, assetName, "gonimeid-")
 
 	// Step 4: Download the asset
 	tempFile, err := downloadAssetWithTestFlag(
@@ -1041,7 +1041,7 @@ func TestUpdateWorkflow_MockScenario(t *testing.T) {
 
 	// Step 5: Simulate executable replacement
 	tempDir := t.TempDir()
-	currentExe := filepath.Join(tempDir, "goanime-current")
+	currentExe := filepath.Join(tempDir, "gonimeid-current")
 	err = os.WriteFile(currentExe, []byte("old version"), 0o755)
 	require.NoError(t, err)
 
@@ -1132,9 +1132,9 @@ func TestFindAssetForPlatform_CaseSensitivity(t *testing.T) {
 			Name               string `json:"name"`
 			BrowserDownloadURL string `json:"browser_download_url"`
 		}{
-			{Name: "GoAnime-Linux-amd64", BrowserDownloadURL: "http://example.com/GoAnime-Linux-amd64"},
-			{Name: "GOANIME-WINDOWS-AMD64.EXE", BrowserDownloadURL: "http://example.com/GOANIME-WINDOWS-AMD64.EXE"},
-			{Name: "goanime-darwin-amd64", BrowserDownloadURL: "http://example.com/goanime-darwin-amd64"},
+			{Name: "GonimeId-Linux-amd64", BrowserDownloadURL: "http://example.com/GonimeId-Linux-amd64"},
+			{Name: "GONIMEID-WINDOWS-AMD64.EXE", BrowserDownloadURL: "http://example.com/GONIMEID-WINDOWS-AMD64.EXE"},
+			{Name: "gonimeid-darwin-amd64", BrowserDownloadURL: "http://example.com/gonimeid-darwin-amd64"},
 		},
 	}
 
@@ -1147,19 +1147,19 @@ func TestFindAssetForPlatform_CaseSensitivity(t *testing.T) {
 		{
 			name:         "linux case insensitive match",
 			platform:     PlatformInfo{OS: "linux", Arch: "amd64"},
-			expectedName: "GoAnime-Linux-amd64",
+			expectedName: "GonimeId-Linux-amd64",
 			shouldFind:   true,
 		},
 		{
 			name:         "windows case insensitive match",
 			platform:     PlatformInfo{OS: "windows", Arch: "amd64"},
-			expectedName: "GOANIME-WINDOWS-AMD64.EXE",
+			expectedName: "GONIMEID-WINDOWS-AMD64.EXE",
 			shouldFind:   true,
 		},
 		{
 			name:         "darwin exact match",
 			platform:     PlatformInfo{OS: "darwin", Arch: "amd64"},
-			expectedName: "goanime-darwin-amd64",
+			expectedName: "gonimeid-darwin-amd64",
 			shouldFind:   true,
 		},
 	}
@@ -1293,22 +1293,22 @@ func TestFindAssetForPlatform_AllCombinations(t *testing.T) {
 			BrowserDownloadURL string `json:"browser_download_url"`
 		}{
 			// Linux assets
-			{Name: "goanime-linux-amd64", BrowserDownloadURL: "http://example.com/goanime-linux-amd64"},
-			{Name: "goanime-linux-386", BrowserDownloadURL: "http://example.com/goanime-linux-386"},
-			{Name: "goanime-linux-arm64", BrowserDownloadURL: "http://example.com/goanime-linux-arm64"},
+			{Name: "gonimeid-linux-amd64", BrowserDownloadURL: "http://example.com/gonimeid-linux-amd64"},
+			{Name: "gonimeid-linux-386", BrowserDownloadURL: "http://example.com/gonimeid-linux-386"},
+			{Name: "gonimeid-linux-arm64", BrowserDownloadURL: "http://example.com/gonimeid-linux-arm64"},
 
 			// Windows assets
-			{Name: "goanime-windows-amd64.exe", BrowserDownloadURL: "http://example.com/goanime-windows-amd64.exe"},
-			{Name: "goanime-windows-386.exe", BrowserDownloadURL: "http://example.com/goanime-windows-386.exe"},
+			{Name: "gonimeid-windows-amd64.exe", BrowserDownloadURL: "http://example.com/gonimeid-windows-amd64.exe"},
+			{Name: "gonimeid-windows-386.exe", BrowserDownloadURL: "http://example.com/gonimeid-windows-386.exe"},
 
 			// macOS assets
-			{Name: "goanime-darwin-amd64", BrowserDownloadURL: "http://example.com/goanime-darwin-amd64"},
-			{Name: "goanime-darwin-arm64", BrowserDownloadURL: "http://example.com/goanime-darwin-arm64"},
-			{Name: "goanime-darwin-universal", BrowserDownloadURL: "http://example.com/goanime-darwin-universal"},
-			{Name: "goanime-darwin", BrowserDownloadURL: "http://example.com/goanime-darwin"},
+			{Name: "gonimeid-darwin-amd64", BrowserDownloadURL: "http://example.com/gonimeid-darwin-amd64"},
+			{Name: "gonimeid-darwin-arm64", BrowserDownloadURL: "http://example.com/gonimeid-darwin-arm64"},
+			{Name: "gonimeid-darwin-universal", BrowserDownloadURL: "http://example.com/gonimeid-darwin-universal"},
+			{Name: "gonimeid-darwin", BrowserDownloadURL: "http://example.com/gonimeid-darwin"},
 
 			// Alternative naming patterns
-			{Name: "goanime-macos-amd64", BrowserDownloadURL: "http://example.com/goanime-macos-amd64"},
+			{Name: "gonimeid-macos-amd64", BrowserDownloadURL: "http://example.com/gonimeid-macos-amd64"},
 		},
 	}
 
@@ -1317,13 +1317,13 @@ func TestFindAssetForPlatform_AllCombinations(t *testing.T) {
 		arch         string
 		expectedName string
 	}{
-		{"linux", "amd64", "goanime-linux-amd64"},
-		{"linux", "386", "goanime-linux-386"},
-		{"linux", "arm64", "goanime-linux-arm64"},
-		{"windows", "amd64", "goanime-windows-amd64.exe"},
-		{"windows", "386", "goanime-windows-386.exe"},
-		{"darwin", "amd64", "goanime-darwin-amd64"},
-		{"darwin", "arm64", "goanime-darwin-arm64"},
+		{"linux", "amd64", "gonimeid-linux-amd64"},
+		{"linux", "386", "gonimeid-linux-386"},
+		{"linux", "arm64", "gonimeid-linux-arm64"},
+		{"windows", "amd64", "gonimeid-windows-amd64.exe"},
+		{"windows", "386", "gonimeid-windows-386.exe"},
+		{"darwin", "amd64", "gonimeid-darwin-amd64"},
+		{"darwin", "arm64", "gonimeid-darwin-arm64"},
 	}
 
 	for _, tt := range platformTests {
@@ -1346,11 +1346,11 @@ func TestFindAssetForPlatform_UniversalBinaryFallback(t *testing.T) {
 			Name               string `json:"name"`
 			BrowserDownloadURL string `json:"browser_download_url"`
 		}{
-			{Name: "goanime-linux-amd64", BrowserDownloadURL: "http://example.com/goanime-linux-amd64"},
-			{Name: "goanime-windows-amd64.exe", BrowserDownloadURL: "http://example.com/goanime-windows-amd64.exe"},
+			{Name: "gonimeid-linux-amd64", BrowserDownloadURL: "http://example.com/gonimeid-linux-amd64"},
+			{Name: "gonimeid-windows-amd64.exe", BrowserDownloadURL: "http://example.com/gonimeid-windows-amd64.exe"},
 			// Only universal binaries for macOS
-			{Name: "goanime-darwin-universal", BrowserDownloadURL: "http://example.com/goanime-darwin-universal"},
-			{Name: "goanime-darwin", BrowserDownloadURL: "http://example.com/goanime-darwin"},
+			{Name: "gonimeid-darwin-universal", BrowserDownloadURL: "http://example.com/gonimeid-darwin-universal"},
+			{Name: "gonimeid-darwin", BrowserDownloadURL: "http://example.com/gonimeid-darwin"},
 		},
 	}
 
@@ -1363,13 +1363,13 @@ func TestFindAssetForPlatform_UniversalBinaryFallback(t *testing.T) {
 		{
 			name:         "amd64_falls_back_to_universal",
 			platform:     PlatformInfo{OS: "darwin", Arch: "amd64"},
-			expectedName: "goanime-darwin-universal",
+			expectedName: "gonimeid-darwin-universal",
 			description:  "Intel Mac should use universal binary when arch-specific not available",
 		},
 		{
 			name:         "arm64_falls_back_to_universal",
 			platform:     PlatformInfo{OS: "darwin", Arch: "arm64"},
-			expectedName: "goanime-darwin-universal",
+			expectedName: "gonimeid-darwin-universal",
 			description:  "Apple Silicon Mac should use universal binary when arch-specific not available",
 		},
 	}
@@ -1390,10 +1390,10 @@ func TestFindAssetForPlatform_UniversalBinaryFallback(t *testing.T) {
 			Name               string `json:"name"`
 			BrowserDownloadURL string `json:"browser_download_url"`
 		}{
-			{Name: "goanime-linux-amd64", BrowserDownloadURL: "http://example.com/goanime-linux-amd64"},
-			{Name: "goanime-windows-amd64.exe", BrowserDownloadURL: "http://example.com/goanime-windows-amd64.exe"},
+			{Name: "gonimeid-linux-amd64", BrowserDownloadURL: "http://example.com/gonimeid-linux-amd64"},
+			{Name: "gonimeid-windows-amd64.exe", BrowserDownloadURL: "http://example.com/gonimeid-windows-amd64.exe"},
 			// Only generic universal binary for macOS
-			{Name: "goanime-darwin", BrowserDownloadURL: "http://example.com/goanime-darwin"},
+			{Name: "gonimeid-darwin", BrowserDownloadURL: "http://example.com/gonimeid-darwin"},
 		},
 	}
 
@@ -1402,7 +1402,7 @@ func TestFindAssetForPlatform_UniversalBinaryFallback(t *testing.T) {
 		url, name, err := findAssetForPlatformWithInfo(genericOnlyRelease, platform)
 
 		assert.NoError(t, err)
-		assert.Equal(t, "goanime-darwin", name)
+		assert.Equal(t, "gonimeid-darwin", name)
 		assert.Contains(t, url, "http://example.com/")
 	})
 }

@@ -2,7 +2,7 @@
 // blogger_test.go — Tests for the Blogger/AnimeFire bug (TLS fingerprint)
 //
 // Bug discovered:  2026-02-28 (Saturday)
-//   Symptom: "Bleach dubbed episode 1" was not playing via GoAnime, but
+//   Symptom: "Bleach dubbed episode 1" was not playing via GonimeId, but
 //   it worked directly on animefire.io. mpv opened a black window with no video.
 //
 // Bug fixed:       2026-03-06 (Friday)

@@ -319,7 +319,7 @@ func PreWarmConnections() {
 				if err != nil {
 					return
 				}
-				req.Header.Set("User-Agent", "GoAnime/1.0")
+				req.Header.Set("User-Agent", "GonimeId/1.0")
 				resp, err := client.Do(req) // #nosec G107
 				if err != nil {
 					// DNS or connect failure is fine — this is best-effort

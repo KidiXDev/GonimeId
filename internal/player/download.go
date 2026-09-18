@@ -1,8 +1,6 @@
 package player
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -11,7 +9,6 @@ import (
 	"net/http"
 	neturl "net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -24,15 +21,14 @@ import (
 	"charm.land/bubbles/v2/progress"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/huh/v2"
-	"github.com/alvarorichard/Goanime/internal/api"
-	"github.com/alvarorichard/Goanime/internal/api/providers"
-	"github.com/alvarorichard/Goanime/internal/downloader/hls"
-	"github.com/alvarorichard/Goanime/internal/models"
-	"github.com/alvarorichard/Goanime/internal/scraper/netx"
-	"github.com/alvarorichard/Goanime/internal/scraper/providers/superflix"
-	"github.com/alvarorichard/Goanime/internal/tui"
-	"github.com/alvarorichard/Goanime/internal/util"
-	"github.com/alvarorichard/Goanime/internal/util/jsonx"
+	"github.com/KidiXDev/GonimeId/internal/api"
+	"github.com/KidiXDev/GonimeId/internal/api/providers"
+	"github.com/KidiXDev/GonimeId/internal/downloader/hls"
+	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/scraper/netx"
+	"github.com/KidiXDev/GonimeId/internal/tui"
+	"github.com/KidiXDev/GonimeId/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/util/jsonx"
 	"github.com/lrstanley/go-ytdlp"
 	"golang.org/x/term"
 )
@@ -44,47 +40,11 @@ var (
 	downloadPartRetryDelay = 500 * time.Millisecond
 )
 
-// downloadUserAgent mirrors the browser User-Agent that AnimeFire's CDN
-// (lightspeedst.net) and other token-protected origins expect. Using the
-// default Go transport UA causes some CDNs to return HTTP 401.
+// downloadUserAgent mirrors a browser User-Agent: token-protected origins
+// answer the default Go transport UA with HTTP 401.
 const downloadUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
 const minDownloadedVideoSize int64 = 10 * 1024 * 1024
-
-func isSuperFlixTextHLS(u string) bool {
-	// "master.txt" as the final path segment is the signature, NOT master.txt
-	// plus "/cdn/hls/". The player host changed its path shape from
-	//   /cdn/hls/<hash>/master.txt
-	// to
-	//   /<token>/<contentid>/<expires>/master.txt
-	// and the "/cdn/hls/" half of the old condition stopped matching. Every
-	// current SuperFlix URL then missed this branch and fell through the
-	// routing switch to the plain-MP4 Range downloader, which happily saved the
-	// playlist TEXT as the episode file. Playback had already been taught the
-	// same lesson — see LooksLikeHLS — so the two now agree.
-	//
-	// Matched as the final path segment rather than as a substring, so a page
-	// that merely mentions it (".../master.txt.html") is not mistaken for a
-	// playlist. The old "/cdn/hls/" clause is gone rather than OR-ed in: the
-	// suffix already covers the legacy shape, and keeping it would have pulled
-	// ordinary "/cdn/hls/<hash>/master.m3u8" URLs away from the native HLS
-	// downloader for no reason.
-	//
-	// Any master.txt is accepted, wherever it sits. The live URL is
-	// /<token>/<contentid>/<expires>/master.txt — structurally indistinguishable
-	// from any other path ending in master.txt — so there is nothing more
-	// specific to key on. Sending a stray master.txt through ffmpeg costs
-	// nothing; the reverse silently writes playlist text into an .mp4.
-	path := u
-	if before, _, ok := strings.Cut(path, "#"); ok {
-		path = before
-	}
-	if before, _, ok := strings.Cut(path, "?"); ok {
-		path = before
-	}
-	lower := strings.ToLower(path)
-	return strings.HasSuffix(lower, "/master.txt")
-}
 
 // Bundled media-tool installers used when ffmpeg/ffprobe are missing from
 // PATH. They download static builds via the go-ytdlp cache (the same
@@ -107,192 +67,6 @@ var (
 	}
 )
 
-// resolveFFmpeg returns an absolute, symlink-resolved path to an ffmpeg
-// executable, installing a bundled static build when ffmpeg is not on PATH.
-//
-// The native HLS downloader cannot substitute for ffmpeg on SuperFlix:
-// segments are video-only with a separate audio group, and yt-dlp treats the
-// .txt master playlist as a plain file, so ffmpeg (or the bundled build) is
-// the only reliable way to mux the final file.
-func resolveFFmpeg(installFFmpeg func(ctx context.Context) (string, error)) (string, error) {
-	ffmpegPath, err := exec.LookPath("ffmpeg")
-	if err != nil {
-		// ffmpeg is not on PATH. Install the bundled static build so
-		// SuperFlix HLS downloads work without the user installing ffmpeg.
-		util.Debug("ffmpeg not found on PATH, installing bundled ffmpeg", "error", err)
-		installCtx, installCancel := context.WithTimeout(context.Background(), 5*time.Minute)
-		var installErr error
-		ffmpegPath, installErr = installFFmpeg(installCtx)
-		installCancel()
-		if installErr != nil {
-			return "", fmt.Errorf("ffmpeg is required for SuperFlix HLS downloads and the bundled install failed: %w", installErr)
-		}
-	}
-	ffmpegPath, err = filepath.EvalSymlinks(ffmpegPath)
-	if err != nil || !filepath.IsAbs(ffmpegPath) {
-		return "", fmt.Errorf("invalid ffmpeg executable path")
-	}
-	return ffmpegPath, nil
-}
-
-// resolveFFprobe is resolveFFmpeg's sibling for ffprobe (shipped in the same
-// bundled archive). It never fails the download: a missing or broken ffprobe
-// only disables duration-based progress.
-func resolveFFprobe(installFFprobe func(ctx context.Context) (string, error)) string {
-	if ffprobePath, err := exec.LookPath("ffprobe"); err == nil {
-		if resolved, evalErr := filepath.EvalSymlinks(ffprobePath); evalErr == nil && filepath.IsAbs(resolved) {
-			return resolved
-		}
-	}
-	installCtx, installCancel := context.WithTimeout(context.Background(), 2*time.Minute)
-	defer installCancel()
-	if resolved, err := installFFprobe(installCtx); err == nil {
-		return resolved
-	}
-	return ""
-}
-
-func ffmpegHLSDownloadArgs(streamURL, outputPath, referer string) []string {
-	args := []string{
-		"-hide_banner", "-loglevel", "error", "-nostdin", "-y",
-		"-f", "hls",
-		// SuperFlix serves MPEG-TS segments behind misleading .js URLs.
-		// Current ffmpeg requires extension_picky=0 even when ALL is supplied
-		// to the older allowed_extensions options.
-		"-extension_picky", "0",
-		"-user_agent", downloadUserAgent,
-		"-progress", "pipe:1", "-nostats",
-	}
-	if ua, headers := pinnedCDNHeaders(referer); headers != "" {
-		return append(append(args, "-user_agent", ua, "-headers", headers),
-			ffmpegHLSOutputArgs(streamURL, outputPath)...)
-	}
-	if referer != "" {
-		args = append(args, "-headers", "Referer: "+referer+"\r\n")
-	}
-	return append(args, ffmpegHLSOutputArgs(streamURL, outputPath)...)
-}
-
-// ffmpegHLSOutputArgs is the input/mapping/output tail every HLS download
-// shares, split out so the header-carrying branches above build the same
-// command.
-func ffmpegHLSOutputArgs(streamURL, outputPath string) []string {
-	return []string{
-		"-i", streamURL,
-		"-map", "0:v:0",
-		"-map", "0:a?",
-		"-c", "copy",
-		"-movflags", "+faststart",
-		outputPath,
-	}
-}
-
-// pinnedCDNHeaders returns the User-Agent and CRLF-joined header block a
-// source has pinned for the current stream, or ("", "") when none has.
-//
-// SuperFlix's player CDN serves a signed URL only to a request that repeats the
-// browser's fingerprint — the right Referer, the browser's exact
-// Accept-Language, the Sec-CH-UA-* client hints, and the exact User-Agent that
-// obtained the URL. Downloading with ffmpeg's own UA and a lone Referer gets
-// every segment 403'd, the same way playback did.
-//
-// The pinned User-Agent (util.SetGlobalUserAgent, set beside the referer when
-// the stream is resolved) is what marks such a source; other sources keep the
-// plain Referer-only behaviour.
-func pinnedCDNHeaders(referer string) (userAgent, headerBlock string) {
-	ua := util.GetGlobalUserAgent()
-	if ua == "" || referer == "" || !util.IsSuperFlixSource() {
-		return "", ""
-	}
-	fields := superflix.CDNPlaybackHeaderFields(referer, ua)
-	if origin := corsOriginOf(referer); origin != "" {
-		fields = append(fields, "Origin: "+origin)
-	}
-	return ua, strings.Join(fields, "\r\n") + "\r\n"
-}
-
-func ffprobeHLSDurationArgs(streamURL, referer string) []string {
-	args := []string{
-		"-v", "error", "-f", "hls", "-extension_picky", "0",
-		"-user_agent", downloadUserAgent,
-	}
-	if ua, headers := pinnedCDNHeaders(referer); headers != "" {
-		args = append(args, "-user_agent", ua, "-headers", headers)
-	} else if referer != "" {
-		args = append(args, "-headers", "Referer: "+referer+"\r\n")
-	}
-	return append(args,
-		"-show_entries", "format=duration",
-		"-of", "default=noprint_wrappers=1:nokey=1",
-		streamURL,
-	)
-}
-
-func probeHLSDuration(ctx context.Context, streamURL, referer, ffprobePath string) (time.Duration, error) {
-	if ffprobePath == "" {
-		var err error
-		ffprobePath, err = exec.LookPath("ffprobe")
-		if err != nil {
-			return 0, err
-		}
-	}
-	ffprobePath, err := filepath.EvalSymlinks(ffprobePath)
-	if err != nil || !filepath.IsAbs(ffprobePath) {
-		return 0, fmt.Errorf("invalid ffprobe executable path")
-	}
-	probeCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-	out, err := exec.CommandContext(probeCtx, ffprobePath, ffprobeHLSDurationArgs(streamURL, referer)...).Output() // #nosec G204 -- executable and URL are validated by the caller
-	if err != nil {
-		return 0, err
-	}
-	seconds, err := strconv.ParseFloat(strings.TrimSpace(string(out)), 64)
-	if err != nil || seconds <= 0 {
-		return 0, fmt.Errorf("invalid HLS duration %q", strings.TrimSpace(string(out)))
-	}
-	return time.Duration(seconds * float64(time.Second)), nil
-}
-
-func ffmpegProgressTime(line string) (time.Duration, bool) {
-	value, ok := strings.CutPrefix(strings.TrimSpace(line), "out_time_us=")
-	if !ok {
-		return 0, false
-	}
-	microseconds, err := strconv.ParseInt(value, 10, 64)
-	if err != nil || microseconds < 0 {
-		return 0, false
-	}
-	return time.Duration(microseconds) * time.Microsecond, true
-}
-
-func updateTimedDownloadProgress(m *model, current, total time.Duration) {
-	if m == nil || total <= 0 || current < 0 {
-		return
-	}
-	if current > total {
-		current = total
-	}
-	pct := float64(current) / float64(total)
-	progressTotal := m.progressTotal()
-	if progressTotal <= 0 {
-		// Single downloads have no byte estimate for HLS. Microseconds are a
-		// stable unit and the model only needs a numerator/denominator ratio.
-		progressTotal = total.Microseconds()
-		m.setProgressTotal(progressTotal)
-	}
-	m.setProgressReceived(int64(float64(progressTotal) * pct))
-	m.setProgressPeak(pct)
-}
-
-func partialMediaPath(path string) string {
-	ext := filepath.Ext(path)
-	base := strings.TrimSuffix(path, ext)
-	if ext == "" {
-		ext = ".mp4"
-	}
-	return base + ".part" + ext
-}
-
 // validateDownloadedVideo prevents CDN error pages (for example SuperFlix's
 // 14-byte "security error") from ever being reported as a completed download.
 func validateDownloadedVideo(path string) error {
@@ -307,150 +81,16 @@ func validateDownloadedVideo(path string) error {
 	return nil
 }
 
-// downloadWithFFmpegHLS handles SuperFlix's master.txt playlist. The playlist
-// and its disguised .js/.css MPEG-TS segments are fetchable over plain HTTP
-// with the right User-Agent/Referer, but the segments are video-only with a
-// separate audio group — ffmpeg is the only supported downloader that follows
-// the master playlist's alternate audio and muxes the final file. yt-dlp
-// treats the .txt master as a generic file, and the native HLS downloader
-// rejects the separate audio group. If ffmpeg is not installed, a bundled
-// static build is installed via the go-ytdlp cache (same mechanism as
-// yt-dlp).
-func downloadWithFFmpegHLS(streamURL, path string, m *model) error {
-	safeURL, err := sanitizeMediaTarget(streamURL)
-	if err != nil {
-		return fmt.Errorf("invalid download URL: %w", err)
-	}
-	safePath, err := sanitizeOutputPath(path)
-	if err != nil {
-		return fmt.Errorf("invalid output path: %w", err)
-	}
-	if err := os.MkdirAll(filepath.Dir(safePath), 0o700); err != nil {
-		return fmt.Errorf("failed to create output directory: %w", err)
-	}
-
-	ffmpegPath, err := resolveFFmpeg(installFFmpegFunc)
-	if err != nil {
-		return err
-	}
-	ffprobePath := resolveFFprobe(installFFprobeFunc)
-
-	partPath := partialMediaPath(safePath)
-	_ = os.Remove(partPath)
-	defer func() { _ = os.Remove(partPath) }()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Hour)
-	defer cancel()
-	referer := util.GetGlobalReferer()
-	if referer == "" {
-		referer = extractRefererFromURL(safeURL)
-	}
-	args := ffmpegHLSDownloadArgs(safeURL, partPath, referer)
-	util.Debug("Starting ffmpeg HLS download", "streamURL", safeURL, "referer", referer)
-	duration, probeErr := probeHLSDuration(ctx, safeURL, referer, ffprobePath)
-	if probeErr != nil {
-		util.Debug("Could not probe HLS duration; progress will use downloaded bytes", "error", probeErr)
-	} else {
-		util.Debug("HLS duration detected for download progress", "duration", duration)
-		updateTimedDownloadProgress(m, 0, duration)
-	}
-
-	var stderr bytes.Buffer
-	cmd := exec.CommandContext(ctx, ffmpegPath, args...) // #nosec G204 -- executable and all media/path inputs are validated above
-	cmd.Stderr = &stderr
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return fmt.Errorf("failed to capture ffmpeg progress: %w", err)
-	}
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to start ffmpeg: %w", err)
-	}
-
-	progressDone := make(chan error, 1)
-	go func() {
-		scanner := bufio.NewScanner(stdout)
-		for scanner.Scan() {
-			if current, ok := ffmpegProgressTime(scanner.Text()); ok && duration > 0 {
-				updateTimedDownloadProgress(m, current, duration)
-			}
-		}
-		progressDone <- scanner.Err()
-	}()
-
-	done := make(chan error, 1)
-	go func() {
-		// os/exec documents that Wait closes the StdoutPipe once the process
-		// exits, "an implication is that it is incorrect to call Wait before
-		// all reads from the pipe have completed". Running Wait concurrently
-		// with the scanner above lost that race on a loaded machine: the pipe
-		// was closed mid-scan, scanner.Err() came back "read |0: file already
-		// closed", and a download whose media file was complete on disk was
-		// reported as a failure. Draining the progress reader first makes the
-		// ordering the API requires.
-		progressErr := <-progressDone
-		if waitErr := cmd.Wait(); waitErr != nil {
-			done <- waitErr
-			return
-		}
-		done <- progressErr
-	}()
-	ticker := time.NewTicker(500 * time.Millisecond)
-	defer ticker.Stop()
-	for {
-		select {
-		case err := <-done:
-			// A non-nil err here is ffmpeg's own exit failure when it has one,
-			// and otherwise the progress-reader error; both mean the download
-			// cannot be trusted.
-			if err != nil {
-				if stderrTail := strings.TrimSpace(stderr.String()); stderrTail != "" {
-					return fmt.Errorf("ffmpeg HLS download failed: %w: %s", err, stderrTail)
-				}
-				return fmt.Errorf("failed to read ffmpeg download progress: %w", err)
-			}
-			stat, statErr := os.Stat(partPath)
-			if statErr != nil || stat.Size() == 0 {
-				return fmt.Errorf("ffmpeg HLS download produced no media")
-			}
-			if err := os.Rename(partPath, safePath); err != nil {
-				return fmt.Errorf("failed to finalize HLS download: %w", err)
-			}
-			return nil
-		case <-ticker.C:
-			if m != nil {
-				if stat, statErr := os.Stat(partPath); statErr == nil {
-					m.setProgressReceived(stat.Size())
-				}
-			}
-		case <-ctx.Done():
-			return fmt.Errorf("ffmpeg HLS download timed out: %w", ctx.Err())
-		}
-	}
-}
-
 // applyDownloadAuthHeaders sets the Referer / User-Agent headers required by
-// origin-protected CDNs (AnimeFire's lightspeedst.net, etc.) onto a
-// download request. It prefers the per-source referer stored in
-// util.GetGlobalReferer (set by the scraper / api layer) and falls back to
-// hardcoded values for known hosts so legacy paths keep working even when the
-// referer was never set.
-func applyDownloadAuthHeaders(req *http.Request, url string) {
+// origin-protected CDNs onto a download request, using the per-source referer
+// stored in util.GetGlobalReferer (set when the stream was resolved).
+func applyDownloadAuthHeaders(req *http.Request, _ string) {
 	if req == nil {
 		return
 	}
 	if req.Header.Get("User-Agent") == "" {
 		req.Header.Set("User-Agent", downloadUserAgent)
 	}
-
-	// A source that pinned a User-Agent did so because its CDN only serves the
-	// signed URL to that exact UA (see pinnedCDNHeaders); the generic default
-	// above would be rejected.
-	if ua, _ := pinnedCDNHeaders(util.GetGlobalReferer()); ua != "" {
-		for name, values := range superflix.CDNPlaybackHeaders(util.GetGlobalReferer(), ua) {
-			req.Header.Set(name, values[0])
-		}
-	}
-
 	if ref := util.GetGlobalReferer(); ref != "" {
 		req.Header.Set("Referer", ref)
 		origin := strings.TrimSuffix(ref, "/")
@@ -460,13 +100,6 @@ func applyDownloadAuthHeaders(req *http.Request, url string) {
 		if req.Header.Get("Origin") == "" {
 			req.Header.Set("Origin", origin)
 		}
-		return
-	}
-
-	switch {
-	case strings.Contains(url, "lightspeedst.net"), strings.Contains(url, "animefire"):
-		req.Header.Set("Referer", "https://animefire.io")
-		req.Header.Set("Origin", "https://animefire.io")
 	}
 }
 
@@ -670,198 +303,6 @@ func hasUnsafeExtension(u string) bool {
 		}
 	}
 	return false
-}
-
-func isAnimeFireVideoAPIURL(u string) bool {
-	lower := strings.ToLower(u)
-	return strings.Contains(lower, "animefire.io/video/") ||
-		strings.Contains(lower, "animefire.plus/video/")
-}
-
-func resolveDownloadURL(videoURL string) (string, error) {
-	if !isAnimeFireVideoAPIURL(videoURL) {
-		return videoURL, nil
-	}
-
-	util.Debug("Resolving AnimeFire video API URL for download", "url", videoURL)
-	resp, err := api.SafeGet(videoURL)
-	if err != nil {
-		return "", fmt.Errorf("failed to fetch AnimeFire video API: %w", err)
-	}
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			util.Warn("Error closing AnimeFire video API response", "error", err)
-		}
-	}()
-
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024))
-	if err != nil {
-		return "", fmt.Errorf("failed to read AnimeFire video API: %w", err)
-	}
-
-	selected, err := selectAnimeFireDownloadSource(body, util.GlobalQuality)
-	if err != nil {
-		return "", err
-	}
-	util.Debug("Resolved AnimeFire download URL", "quality", util.GlobalQuality, "url", selected)
-	return selected, nil
-}
-
-func selectAnimeFireDownloadSource(body []byte, quality string) (string, error) {
-	candidates, err := selectAnimeFireDownloadCandidates(body, quality)
-	if err != nil {
-		return "", err
-	}
-	return candidates[0], nil
-}
-
-func selectAnimeFireDownloadCandidates(body []byte, quality string) ([]string, error) {
-	var videoResponse VideoResponse
-	if err := jsonx.Unmarshal(body, &videoResponse); err != nil {
-		return nil, fmt.Errorf("failed to parse AnimeFire video API: %w", err)
-	}
-	if len(videoResponse.Data) > 0 {
-		candidates := orderAnimeFireSources(videoResponse.Data, quality)
-		if len(candidates) == 0 {
-			return nil, errors.New("AnimeFire video API returned no selectable source")
-		}
-		return candidates, nil
-	}
-	if strings.Contains(videoResponse.Token, "blogger.com") {
-		return []string{videoResponse.Token}, nil
-	}
-	return nil, errors.New("AnimeFire video API returned no sources")
-}
-
-func orderAnimeFireSources(videoData []VideoData, quality string) []string {
-	if len(videoData) == 0 {
-		return nil
-	}
-
-	preferred := selectQualityFromOptions(videoData, quality)
-	ordered := append([]VideoData(nil), videoData...)
-	preferredQuality := strings.ToLower(strings.TrimSpace(quality))
-	targetResolution := extractResolution(preferredQuality)
-
-	sort.SliceStable(ordered, func(i, j int) bool {
-		left := extractResolution(ordered[i].Label)
-		right := extractResolution(ordered[j].Label)
-		switch {
-		case preferredQuality == "worst":
-			return left < right
-		case preferredQuality == "best" || preferredQuality == "":
-			return left > right
-		case targetResolution > 0:
-			leftDiff := abs(left - targetResolution)
-			rightDiff := abs(right - targetResolution)
-			if leftDiff == rightDiff {
-				return left > right
-			}
-			return leftDiff < rightDiff
-		default:
-			return false
-		}
-	})
-
-	var candidates []string
-	seen := make(map[string]struct{}, len(videoData))
-	addCandidate := func(src string) {
-		if src == "" {
-			return
-		}
-		if _, ok := seen[src]; ok {
-			return
-		}
-		seen[src] = struct{}{}
-		candidates = append(candidates, src)
-	}
-
-	addCandidate(preferred)
-	for _, v := range ordered {
-		addCandidate(v.Src)
-	}
-	return candidates
-}
-
-func resolveAnimeFireFallbackDownloadURL(videoAPIURL, failedURL string) (string, error) {
-	if !isAnimeFireVideoAPIURL(videoAPIURL) {
-		return "", errors.New("source URL is not an AnimeFire video API URL")
-	}
-
-	resp, err := api.SafeGet(videoAPIURL)
-	if err != nil {
-		return "", fmt.Errorf("failed to fetch AnimeFire fallback sources: %w", err)
-	}
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			util.Warn("Error closing AnimeFire fallback response", "error", err)
-		}
-	}()
-
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024))
-	if err != nil {
-		return "", fmt.Errorf("failed to read AnimeFire fallback sources: %w", err)
-	}
-
-	candidates, err := selectAnimeFireDownloadCandidates(body, util.GlobalQuality)
-	if err != nil {
-		return "", err
-	}
-	for _, candidate := range candidates {
-		if candidate != "" && candidate != failedURL {
-			return candidate, nil
-		}
-	}
-	return "", errors.New("AnimeFire video API returned no fallback source")
-}
-
-type directDownloadFunc func(string, string, *model) error
-type fallbackResolveFunc func(string, string) (string, error)
-
-func downloadAnimeFireDirectWithFallback(videoAPIURL, videoURL, path string, m *model) error {
-	// lightspeedst.net (AnimeFire CDN) requires Referer: https://animefire.io to authorise
-	// token-signed requests. Ensure it is set before the download client sends any request.
-	if util.GetGlobalReferer() == "" {
-		util.SetGlobalReferer("https://animefire.io")
-	}
-	return runAnimeFireDirectDownloadWithFallback(
-		videoAPIURL,
-		videoURL,
-		path,
-		m,
-		downloadDirectHTTP,
-		resolveAnimeFireFallbackDownloadURL,
-	)
-}
-
-func runAnimeFireDirectDownloadWithFallback(videoAPIURL, videoURL, path string, m *model, download directDownloadFunc, resolveFallback fallbackResolveFunc) error {
-	err := download(videoURL, path, m)
-	if err == nil {
-		return nil
-	}
-	if !isHTTPStatusError(err, http.StatusNotFound) || !isAnimeFireVideoAPIURL(videoAPIURL) {
-		return err
-	}
-
-	fallbackURL, fallbackErr := resolveFallback(videoAPIURL, videoURL)
-	if fallbackErr != nil || fallbackURL == "" {
-		util.Debug("AnimeFire fallback source unavailable", "url", videoURL, "error", fallbackErr)
-		return err
-	}
-
-	util.Debug("AnimeFire source returned 404, retrying fallback source", "failed_url", videoURL, "fallback_url", fallbackURL)
-	m.resetProgressReceived()
-	if retryErr := download(fallbackURL, path, m); retryErr != nil {
-		return fmt.Errorf("%w; AnimeFire fallback failed: %v", err, retryErr)
-	}
-	return nil
-}
-
-func isHTTPStatusError(err error, status int) bool {
-	if err == nil {
-		return false
-	}
-	return strings.Contains(err.Error(), fmt.Sprintf("HTTP %d", status))
 }
 
 type batchDownloadFailure struct {
@@ -1721,7 +1162,7 @@ func ExtractVideoSourcesWithPrompt(episodeURL string) (string, error) {
 	// live in buildQualityMenu and are pinned by quality_menu_test.go.
 	idx, err := tui.PickLabels(items, tui.PickOptions{
 		Breadcrumb:   "Playback > Quality",
-		WindowTitle:  "GoAnime - Quality",
+		WindowTitle:  "GonimeId - Quality",
 		ItemSingular: "quality",
 		ItemPlural:   "qualities",
 	})
@@ -1755,7 +1196,6 @@ func HandleBatchDownload(episodes []models.Episode, anime *models.Anime) error {
 		}
 		episodesToDownload []int
 		resolvedURLs       = make(map[int]string) // cache URLs from pre-flight
-		sourceURLs         = make(map[int]string) // original source URLs used for fallback resolution
 		estimatedSizes     = make(map[int]int64)
 		failuresMu         sync.Mutex
 		failures           []batchDownloadFailure
@@ -1800,16 +1240,6 @@ func HandleBatchDownload(episodes []models.Episode, anime *models.Anime) error {
 			}
 			util.Logger.Warn("Skipping episode (no stream)", "episode", episodeNum, "error", err)
 			recordBatchDownloadFailure(&failuresMu, &failures, episodeNum, fmt.Errorf("failed to resolve stream: %w", err))
-			continue
-		}
-		sourceURLs[episodeNum] = videoURL
-		videoURL, err = resolveDownloadURL(videoURL)
-		if err != nil || videoURL == "" {
-			if err == nil {
-				err = errors.New("empty download URL")
-			}
-			util.Logger.Warn("Skipping episode (failed to resolve download URL)", "episode", episodeNum, "error", err)
-			recordBatchDownloadFailure(&failuresMu, &failures, episodeNum, err)
 			continue
 		}
 
@@ -1891,7 +1321,6 @@ func HandleBatchDownload(episodes []models.Episode, anime *models.Anime) error {
 				}
 				// Use cached URL from pre-flight; fall back to re-resolving
 				videoURL, ok := resolvedURLs[epNum]
-				sourceURL := sourceURLs[epNum]
 				if !ok || videoURL == "" {
 					var err error
 					videoURL, err = getBestQualityURL(episode, anime)
@@ -1901,13 +1330,6 @@ func HandleBatchDownload(episodes []models.Episode, anime *models.Anime) error {
 						}
 						util.Warn("Skipping episode in batch", "episode", epNum, "error", err)
 						recordBatchDownloadFailure(&failuresMu, &failures, epNum, fmt.Errorf("failed to resolve stream: %w", err))
-						return
-					}
-					sourceURL = videoURL
-					videoURL, err = resolveDownloadURL(videoURL)
-					if err != nil {
-						util.Warn("Skipping episode in batch", "episode", epNum, "error", err)
-						recordBatchDownloadFailure(&failuresMu, &failures, epNum, err)
 						return
 					}
 				}
@@ -1938,13 +1360,8 @@ func HandleBatchDownload(episodes []models.Episode, anime *models.Anime) error {
 				// (.jpg, .png) and "live" HLS (no #EXT-X-ENDLIST) that break yt-dlp.
 				// Also for URLs with extensions yt-dlp rejects (.aspx, .php, etc.).
 				switch {
-				case isSuperFlixTextHLS(videoURL):
-					err = downloadWithFFmpegHLS(videoURL, episodePath, progressModel)
-				// LooksLikeHLS, not a bare ".m3u8" substring: the two other
-				// routing switches already use it, and keying on the extension
-				// alone missed playlists served under "/hls/" without one —
-				// those fell through to the plain-MP4 downloader, the same way
-				// SuperFlix's master.txt did.
+				// LooksLikeHLS, not a bare ".m3u8" substring: keying on the
+				// extension alone missed playlists served under "/hls/".
 				case LooksLikeHLS(videoURL) || hasUnsafeExtension(videoURL):
 					err = downloadWithNativeHLS(videoURL, episodePath, progressModel)
 					if err != nil && errors.Is(err, hls.ErrSeparateAudioTracks) {
@@ -1972,8 +1389,6 @@ func HandleBatchDownload(episodes []models.Episode, anime *models.Anime) error {
 					}
 				case strings.Contains(videoURL, ".mpd") || strings.Contains(videoURL, "repackager.wixmp.com"):
 					err = downloadWithYtDlp(videoURL, episodePath, progressModel)
-				case anime.Source == "Animefire.io" || strings.Contains(videoURL, "lightspeedst.net"):
-					err = downloadAnimeFireDirectWithFallback(sourceURL, videoURL, episodePath, progressModel)
 				default:
 					// Plain MP4 (including blogger proxy) — multi-threaded Range download
 					err = DownloadVideo(videoURL, episodePath, 4, progressModel)
@@ -2063,7 +1478,6 @@ func HandleBatchDownloadRange(episodes []models.Episode, anime *models.Anime, st
 		httpClient         = &http.Client{Transport: api.SafeTransport(10 * time.Second)}
 		episodesToDownload []int
 		resolvedURLs       = make(map[int]string) // cache URLs from pre-flight
-		sourceURLs         = make(map[int]string) // original source URLs used for fallback resolution
 		estimatedSizes     = make(map[int]int64)
 		failuresMu         sync.Mutex
 		failures           []batchDownloadFailure
@@ -2107,16 +1521,6 @@ func HandleBatchDownloadRange(episodes []models.Episode, anime *models.Anime, st
 			}
 			util.Logger.Warn("Skipping episode (no stream)", "episode", episodeNum, "error", err)
 			recordBatchDownloadFailure(&failuresMu, &failures, episodeNum, fmt.Errorf("failed to resolve stream: %w", err))
-			continue
-		}
-		sourceURLs[episodeNum] = videoURL
-		videoURL, err = resolveDownloadURL(videoURL)
-		if err != nil || videoURL == "" {
-			if err == nil {
-				err = errors.New("empty download URL")
-			}
-			util.Logger.Warn("Skipping episode (failed to resolve download URL)", "episode", episodeNum, "error", err)
-			recordBatchDownloadFailure(&failuresMu, &failures, episodeNum, err)
 			continue
 		}
 
@@ -2186,7 +1590,6 @@ func HandleBatchDownloadRange(episodes []models.Episode, anime *models.Anime, st
 
 				// Use cached URL from pre-flight; fall back to re-resolving
 				videoURL, ok := resolvedURLs[epNum]
-				sourceURL := sourceURLs[epNum]
 				if !ok || videoURL == "" {
 					var err error
 					videoURL, err = getBestQualityURL(episode, anime)
@@ -2196,13 +1599,6 @@ func HandleBatchDownloadRange(episodes []models.Episode, anime *models.Anime, st
 						}
 						util.Warn("Skipping episode in batch", "episode", epNum, "error", err)
 						recordBatchDownloadFailure(&failuresMu, &failures, epNum, fmt.Errorf("failed to resolve stream: %w", err))
-						return
-					}
-					sourceURL = videoURL
-					videoURL, err = resolveDownloadURL(videoURL)
-					if err != nil {
-						util.Warn("Skipping episode in batch", "episode", epNum, "error", err)
-						recordBatchDownloadFailure(&failuresMu, &failures, epNum, err)
 						return
 					}
 				}
@@ -2233,13 +1629,8 @@ func HandleBatchDownloadRange(episodes []models.Episode, anime *models.Anime, st
 				// (.jpg, .png) and "live" HLS (no #EXT-X-ENDLIST) that break yt-dlp.
 				// Also for URLs with extensions yt-dlp rejects (.aspx, .php, etc.).
 				switch {
-				case isSuperFlixTextHLS(videoURL):
-					dlErr = downloadWithFFmpegHLS(videoURL, episodePath, progressModel)
-				// LooksLikeHLS, not a bare ".m3u8" substring: the two other
-				// routing switches already use it, and keying on the extension
-				// alone missed playlists served under "/hls/" without one —
-				// those fell through to the plain-MP4 downloader, the same way
-				// SuperFlix's master.txt did.
+				// LooksLikeHLS, not a bare ".m3u8" substring: keying on the
+				// extension alone missed playlists served under "/hls/".
 				case LooksLikeHLS(videoURL) || hasUnsafeExtension(videoURL):
 					dlErr = downloadWithNativeHLS(videoURL, episodePath, progressModel)
 					if dlErr != nil && errors.Is(dlErr, hls.ErrSeparateAudioTracks) {
@@ -2267,8 +1658,6 @@ func HandleBatchDownloadRange(episodes []models.Episode, anime *models.Anime, st
 					}
 				case strings.Contains(videoURL, ".mpd") || strings.Contains(videoURL, "repackager.wixmp.com"):
 					dlErr = downloadWithYtDlp(videoURL, episodePath, progressModel)
-				case anime.Source == "Animefire.io" || strings.Contains(videoURL, "lightspeedst.net"):
-					dlErr = downloadAnimeFireDirectWithFallback(sourceURL, videoURL, episodePath, progressModel)
 				default:
 					// Plain MP4 (including blogger proxy) — multi-threaded Range download
 					dlErr = DownloadVideo(videoURL, episodePath, 4, progressModel)
@@ -2439,9 +1828,9 @@ func createEpisodePath(animeURL string, epNum int) (string, error) {
 	safeAnimeName := strings.ReplaceAll(DownloadFolderFormatter(animeURL), " ", "_")
 	var fallbackBase string
 	if snap.IsMovieOrTV {
-		fallbackBase = filepath.Join(userHome, ".local", "goanime", "downloads", "movies")
+		fallbackBase = filepath.Join(userHome, ".local", "gonimeid", "downloads", "movies")
 	} else {
-		fallbackBase = filepath.Join(userHome, ".local", "goanime", "downloads", "anime")
+		fallbackBase = filepath.Join(userHome, ".local", "gonimeid", "downloads", "anime")
 	}
 	downloadDir := filepath.Join(fallbackBase, safeAnimeName)
 	if err := os.MkdirAll(downloadDir, 0o700); err != nil {
@@ -2523,7 +1912,7 @@ func handleExistingEpisodes(episodes []models.Episode, animeURL string, startNum
 	}
 	idx, err := tui.PickLabels(labels, tui.PickOptions{
 		Breadcrumb:   "Download > Watch",
-		WindowTitle:  "GoAnime - Watch Downloaded",
+		WindowTitle:  "GonimeId - Watch Downloaded",
 		ItemSingular: "episode",
 		ItemPlural:   "episodes",
 	})
@@ -2617,7 +2006,7 @@ func askAndPlayDownloadedEpisode(episodes []models.Episode, animeURL string, sta
 	}
 	idx, err := tui.PickLabels(labels, tui.PickOptions{
 		Breadcrumb:   "Download > Watch Range",
-		WindowTitle:  "GoAnime - Watch Downloaded",
+		WindowTitle:  "GonimeId - Watch Downloaded",
 		ItemSingular: "episode",
 		ItemPlural:   "episodes",
 	})

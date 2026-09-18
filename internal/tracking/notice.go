@@ -1,14 +1,7 @@
 package tracking
 
-import (
-	"fmt"
-)
-
-// HandleTrackingNotice displays a notice about tracking availability
-func HandleTrackingNotice() {
-	if !IsCgoEnabled {
-		fmt.Println("Notice: Anime progress tracking disabled (CGO not available)")
-		fmt.Println("Episode progress and resume features will not be available.")
-		fmt.Println()
-	}
-}
+// HandleTrackingNotice used to print two lines above every search prompt when
+// the binary was built without CGO/SQLite. A build-time fact shown on each run
+// read like an error, so the notice is gone; `--version` still says which
+// build this is. Kept as a no-op so the call site and tests stay stable.
+func HandleTrackingNotice() {}

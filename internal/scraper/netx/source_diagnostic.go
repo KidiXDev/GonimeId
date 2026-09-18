@@ -406,7 +406,7 @@ func ProbeOriginStatus(parent context.Context, probeURL string, budget time.Dura
 	if err != nil {
 		return 0
 	}
-	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; GoAnime origin probe)")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; GonimeId origin probe)")
 
 	client := &http.Client{Transport: originProbeTransport, Timeout: budget}
 	resp, err := client.Do(req)

@@ -4,7 +4,7 @@ package netx
 // follow-up.
 //
 // Discovered:  2026-04-28 — user-supplied debug log
-//              ("===== GoAnime Debug Session — 2026-04-28 00:15:47 =====")
+//              ("===== GonimeId Debug Session — 2026-04-28 00:15:47 =====")
 //              showed `Search source diagnostic details="FlixHQ temporarily
 //              unavailable: search timed out after 12s"` for FlixHQ, SFlix
 //              and 9Anime simultaneously. Manual probe with curl returned
@@ -21,7 +21,7 @@ package netx
 //              "temporarily unavailable: search timed out after 12s" line.
 //              Operators looking at that log could not tell the difference
 //              between (a) their network being slow, (b) the site being dead,
-//              and (c) the GoAnime client being broken.
+//              and (c) the GonimeId client being broken.
 // Blast radius:diagnostic-only — search results were already correct (the
 //              source was correctly skipped, SuperFlix etc. still returned
 //              results). The bug was that the WARN line lied about the

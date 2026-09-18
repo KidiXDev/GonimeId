@@ -186,7 +186,7 @@ func snapshotOsArgs(t *testing.T) {
 func TestFlagParser_PlainName(t *testing.T) {
 	snapshotOsArgs(t)
 	snapshotGlobalRequest(t)
-	os.Args = []string{"goanime", "naruto"}
+	os.Args = []string{"gonimeid", "naruto"}
 
 	name, err := FlagParser()
 	require.NoError(t, err)
@@ -196,7 +196,7 @@ func TestFlagParser_PlainName(t *testing.T) {
 func TestFlagParser_TooShortNameFails(t *testing.T) {
 	snapshotOsArgs(t)
 	snapshotGlobalRequest(t)
-	os.Args = []string{"goanime", "abc"}
+	os.Args = []string{"gonimeid", "abc"}
 
 	_, err := FlagParser()
 	require.Error(t, err)
@@ -206,7 +206,7 @@ func TestFlagParser_TooShortNameFails(t *testing.T) {
 func TestFlagParser_HelpFlagReturnsHelpRequested(t *testing.T) {
 	snapshotOsArgs(t)
 	snapshotGlobalRequest(t)
-	os.Args = []string{"goanime", "--help"}
+	os.Args = []string{"gonimeid", "--help"}
 
 	// Helper() → ShowBeautifulHelp writes ~12 KB to stdout in one shot.
 	// Without a concurrent drainer the pipe buffer fills and WriteFile
@@ -226,7 +226,7 @@ func TestFlagParser_HelpFlagReturnsHelpRequested(t *testing.T) {
 func TestFlagParser_UpdateFlagReturnsUpdateRequested(t *testing.T) {
 	snapshotOsArgs(t)
 	snapshotGlobalRequest(t)
-	os.Args = []string{"goanime", "--update"}
+	os.Args = []string{"gonimeid", "--update"}
 
 	_, err := FlagParser()
 	require.ErrorIs(t, err, ErrUpdateRequested)
@@ -235,7 +235,7 @@ func TestFlagParser_UpdateFlagReturnsUpdateRequested(t *testing.T) {
 func TestFlagParser_DownloadModeStoresRequest(t *testing.T) {
 	snapshotOsArgs(t)
 	snapshotGlobalRequest(t)
-	os.Args = []string{"goanime", "-d", "naruto", "5"}
+	os.Args = []string{"gonimeid", "-d", "naruto", "5"}
 
 	name, err := FlagParser()
 	require.ErrorIs(t, err, ErrDownloadRequested)
@@ -248,7 +248,7 @@ func TestFlagParser_DownloadModeStoresRequest(t *testing.T) {
 func TestFlagParser_DownloadModeRangeStoresRequest(t *testing.T) {
 	snapshotOsArgs(t)
 	snapshotGlobalRequest(t)
-	os.Args = []string{"goanime", "-d", "-r", "demon slayer", "1-3"}
+	os.Args = []string{"gonimeid", "-d", "-r", "demon slayer", "1-3"}
 
 	name, err := FlagParser()
 	require.ErrorIs(t, err, ErrDownloadRequested)
@@ -262,23 +262,12 @@ func TestFlagParser_DownloadModeRangeStoresRequest(t *testing.T) {
 func TestFlagParser_DownloadAllSetsAllFlag(t *testing.T) {
 	snapshotOsArgs(t)
 	snapshotGlobalRequest(t)
-	os.Args = []string{"goanime", "-d", "-a", "one piece"}
+	os.Args = []string{"gonimeid", "-d", "-a", "one piece"}
 
 	_, err := FlagParser()
 	require.ErrorIs(t, err, ErrDownloadRequested)
 	require.NotNil(t, GlobalDownloadRequest)
 	assert.True(t, GlobalDownloadRequest.IsAll)
-}
-
-func TestFlagParser_MovieDownloadStoresRequest(t *testing.T) {
-	snapshotOsArgs(t)
-	snapshotGlobalRequest(t)
-	os.Args = []string{"goanime", "-dm", "inception"}
-
-	_, err := FlagParser()
-	require.ErrorIs(t, err, ErrMovieDownloadRequested)
-	require.NotNil(t, GlobalDownloadRequest)
-	assert.True(t, GlobalDownloadRequest.IsMovie)
 }
 
 func TestFlagParser_UpscaleStoresRequest(t *testing.T) {
@@ -287,7 +276,7 @@ func TestFlagParser_UpscaleStoresRequest(t *testing.T) {
 
 	tmp := filepath.Join(t.TempDir(), "video.mp4")
 	require.NoError(t, os.WriteFile(tmp, []byte("x"), 0o600))
-	os.Args = []string{"goanime", "--upscale", tmp}
+	os.Args = []string{"gonimeid", "--upscale", tmp}
 
 	path, err := FlagParser()
 	require.ErrorIs(t, err, ErrUpscaleRequested)
@@ -299,7 +288,7 @@ func TestFlagParser_UpscaleStoresRequest(t *testing.T) {
 func TestFlagParser_PerfFlagEnablesPerfAndDebug(t *testing.T) {
 	snapshotOsArgs(t)
 	snapshotGlobalRequest(t)
-	os.Args = []string{"goanime", "-perf", "naruto"}
+	os.Args = []string{"gonimeid", "-perf", "naruto"}
 
 	_, err := FlagParser()
 	require.NoError(t, err)
@@ -319,7 +308,7 @@ func TestGetUserInput_NoTTYReturnsError(t *testing.T) {
 		// handle indefinitely, making the test hang instead of error.
 		t.Skip("Windows console API bypasses os.Stdin redirection; no-TTY error path not testable without process-level console detachment")
 	}
-	if os.Getenv("CI") == "" && os.Getenv("GOANIME_RUN_TTY_TESTS") == "1" {
+	if os.Getenv("CI") == "" && os.Getenv("GONIMEID_RUN_TTY_TESTS") == "1" {
 		t.Skip("explicit TTY mode requested by env — skipping non-TTY assertion")
 	}
 	// Redirect stdin to /dev/null to guarantee no TTY.
@@ -492,121 +481,6 @@ func TestHandleUpscaleMode_HQModeOverridesPassesAndStrength(t *testing.T) {
 	assert.InDelta(t, 0.4, GlobalUpscaleRequest.StrengthColor, 0.001)
 }
 
-func TestHandleMovieDownloadMode_EmptyArgsErrors(t *testing.T) {
-	snapshotGlobalRequest(t)
-	_, err := handleMovieDownloadMode(nil, false, false, "best", "english", "")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "requires movie/TV name")
-}
-
-func TestHandleMovieDownloadMode_Movie(t *testing.T) {
-	snapshotGlobalRequest(t)
-	name, err := handleMovieDownloadMode([]string{"inception"}, false, false, "best", "english", "")
-	require.ErrorIs(t, err, ErrMovieDownloadRequested)
-	assert.Equal(t, "inception", name)
-	require.NotNil(t, GlobalDownloadRequest)
-	assert.True(t, GlobalDownloadRequest.IsMovie)
-}
-
-func TestHandleMovieDownloadMode_TVAllSeasons(t *testing.T) {
-	snapshotGlobalRequest(t)
-	_, err := handleMovieDownloadMode([]string{"breaking", "bad"}, false, true, "best", "english", "tv")
-	require.ErrorIs(t, err, ErrMovieDownloadRequested)
-	require.NotNil(t, GlobalDownloadRequest)
-	assert.True(t, GlobalDownloadRequest.IsAll)
-	assert.True(t, GlobalDownloadRequest.IsTV)
-}
-
-func TestHandleMovieDownloadMode_TVRangeValid(t *testing.T) {
-	snapshotGlobalRequest(t)
-	_, err := handleMovieDownloadMode([]string{"got", "1", "1-5"}, true, false, "best", "english", "tv")
-	require.ErrorIs(t, err, ErrMovieDownloadRequested)
-	require.NotNil(t, GlobalDownloadRequest)
-	assert.True(t, GlobalDownloadRequest.IsTV)
-	assert.True(t, GlobalDownloadRequest.IsRange)
-	assert.Equal(t, 1, GlobalDownloadRequest.SeasonNum)
-	assert.Equal(t, 1, GlobalDownloadRequest.StartEpisode)
-	assert.Equal(t, 5, GlobalDownloadRequest.EndEpisode)
-}
-
-func TestHandleMovieDownloadMode_TVRangeMissingArgs(t *testing.T) {
-	snapshotGlobalRequest(t)
-	_, err := handleMovieDownloadMode([]string{"got"}, true, false, "best", "english", "tv")
-	require.Error(t, err)
-}
-
-func TestHandleMovieDownloadMode_TVRangeInvalidSeason(t *testing.T) {
-	snapshotGlobalRequest(t)
-	_, err := handleMovieDownloadMode([]string{"got", "x", "1-3"}, true, false, "best", "english", "tv")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "season number")
-}
-
-func TestHandleMovieDownloadMode_TVRangeStartAfterEnd(t *testing.T) {
-	snapshotGlobalRequest(t)
-	_, err := handleMovieDownloadMode([]string{"got", "1", "9-2"}, true, false, "best", "english", "tv")
-	require.Error(t, err)
-}
-
-func TestHandleMovieDownloadMode_TVRangeNegativeSeason(t *testing.T) {
-	snapshotGlobalRequest(t)
-	_, err := handleMovieDownloadMode([]string{"got", "0", "1-3"}, true, false, "best", "english", "tv")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "positive")
-}
-
-func TestHandleMovieDownloadMode_TVRangeInvalidEpisodeFormat(t *testing.T) {
-	snapshotGlobalRequest(t)
-	_, err := handleMovieDownloadMode([]string{"got", "1", "bad"}, true, false, "best", "english", "tv")
-	require.Error(t, err)
-}
-
-func TestHandleMovieDownloadMode_TVRangeInvalidStartNumber(t *testing.T) {
-	snapshotGlobalRequest(t)
-	_, err := handleMovieDownloadMode([]string{"got", "1", "x-3"}, true, false, "best", "english", "tv")
-	require.Error(t, err)
-}
-
-func TestHandleMovieDownloadMode_TVRangeInvalidEndNumber(t *testing.T) {
-	snapshotGlobalRequest(t)
-	_, err := handleMovieDownloadMode([]string{"got", "1", "1-x"}, true, false, "best", "english", "tv")
-	require.Error(t, err)
-}
-
-func TestHandleMovieDownloadMode_TVSingleEpisode(t *testing.T) {
-	snapshotGlobalRequest(t)
-	_, err := handleMovieDownloadMode([]string{"got", "1", "3"}, false, false, "best", "english", "tv")
-	require.ErrorIs(t, err, ErrMovieDownloadRequested)
-	require.NotNil(t, GlobalDownloadRequest)
-	assert.True(t, GlobalDownloadRequest.IsTV)
-	assert.Equal(t, 1, GlobalDownloadRequest.SeasonNum)
-	assert.Equal(t, 3, GlobalDownloadRequest.EpisodeNum)
-}
-
-func TestHandleMovieDownloadMode_TVSingleMissingArgs(t *testing.T) {
-	snapshotGlobalRequest(t)
-	_, err := handleMovieDownloadMode([]string{"got"}, false, false, "best", "english", "tv")
-	require.Error(t, err)
-}
-
-func TestHandleMovieDownloadMode_TVSingleInvalidSeason(t *testing.T) {
-	snapshotGlobalRequest(t)
-	_, err := handleMovieDownloadMode([]string{"got", "x", "3"}, false, false, "best", "english", "tv")
-	require.Error(t, err)
-}
-
-func TestHandleMovieDownloadMode_TVSingleInvalidEpisode(t *testing.T) {
-	snapshotGlobalRequest(t)
-	_, err := handleMovieDownloadMode([]string{"got", "1", "x"}, false, false, "best", "english", "tv")
-	require.Error(t, err)
-}
-
-func TestHandleMovieDownloadMode_TVSingleNonPositive(t *testing.T) {
-	snapshotGlobalRequest(t)
-	_, err := handleMovieDownloadMode([]string{"got", "0", "1"}, false, false, "best", "english", "tv")
-	require.Error(t, err)
-}
-
 func TestDefaultDownloadDir_RespectsGlobalOverride(t *testing.T) {
 	snapshotGlobalRequest(t)
 	GlobalOutputDir = "/custom/path"
@@ -618,7 +492,7 @@ func TestDefaultDownloadDir_DefaultPath(t *testing.T) {
 	GlobalOutputDir = ""
 	got := DefaultDownloadDir()
 	assert.True(t, filepath.IsAbs(got) || got != "")
-	assert.Contains(t, got, filepath.Join(".local", "goanime", "downloads", "anime"))
+	assert.Contains(t, got, filepath.Join(".local", "gonimeid", "downloads", "anime"))
 }
 
 func TestDefaultMovieDownloadDir_RespectsGlobalOverride(t *testing.T) {
@@ -631,7 +505,7 @@ func TestDefaultMovieDownloadDir_DefaultPath(t *testing.T) {
 	snapshotGlobalRequest(t)
 	GlobalOutputDir = ""
 	got := DefaultMovieDownloadDir()
-	assert.Contains(t, got, filepath.Join(".local", "goanime", "downloads", "movies"))
+	assert.Contains(t, got, filepath.Join(".local", "gonimeid", "downloads", "movies"))
 }
 
 func TestFormatPlexMovieDir_BaseCase(t *testing.T) {
@@ -676,7 +550,7 @@ func newEmptyFlagSet(t *testing.T) *flag.FlagSet {
 
 func newFlagSetWithArgs(t *testing.T, args ...string) *flag.FlagSet {
 	t.Helper()
-	fs := flag.NewFlagSet("goanime-test", flag.ContinueOnError)
+	fs := flag.NewFlagSet("gonimeid-test", flag.ContinueOnError)
 	require.NoError(t, fs.Parse(args))
 	return fs
 }

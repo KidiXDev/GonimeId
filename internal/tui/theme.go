@@ -2,7 +2,7 @@ package tui
 
 import "charm.land/lipgloss/v2"
 
-// Theme contains the shared visual language for GoAnime's interactive screens.
+// Theme contains the shared visual language for GonimeId's interactive screens.
 type Theme struct {
 	Primary             lipgloss.Style
 	Text                lipgloss.Style
@@ -19,7 +19,7 @@ type Theme struct {
 	FilterMatch         lipgloss.Style
 }
 
-// NewTheme builds a deterministic light or dark GoAnime theme.
+// NewTheme builds a deterministic light or dark GonimeId theme.
 func NewTheme(isDark bool) Theme {
 	lightDark := lipgloss.LightDark(isDark)
 	primary := lightDark(lipgloss.Color("#6D28D9"), lipgloss.Color("#A78BFA"))

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/alvarorichard/Goanime/internal/models"
-	"github.com/alvarorichard/Goanime/internal/scraper/netx"
+	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/scraper/netx"
 )
 
 // SourceHealthStatus is the result class for a provider health probe.
@@ -18,7 +18,7 @@ const (
 	SourceHealthHealthy SourceHealthStatus = "healthy"
 	// SourceHealthSkipped means the provider is offline/blocked and CI should not fail.
 	SourceHealthSkipped SourceHealthStatus = "skipped"
-	// SourceHealthFailed means the provider responded but GoAnime likely needs a fix.
+	// SourceHealthFailed means the provider responded but GonimeId likely needs a fix.
 	SourceHealthFailed SourceHealthStatus = "failed"
 )
 
@@ -35,18 +35,13 @@ type SourceHealthResult struct {
 }
 
 // DefaultHealthCheckQuery returns a stable query expected to produce results.
-func DefaultHealthCheckQuery(source ScraperType) string {
-	switch source {
-	case SuperFlixType:
-		return "dexter"
-	default:
-		return "naruto"
-	}
+func DefaultHealthCheckQuery(ScraperType) string {
+	return "naruto"
 }
 
 // healthTargets returns the source types to probe, in deterministic order.
 func healthTargets() []ScraperType {
-	return []ScraperType{AnimefireType, GoyabuType, SuperFlixType, AniDBType, OtakudesuType, SamehadakuType}
+	return []ScraperType{OtakudesuType, SamehadakuType}
 }
 
 // checkSourceHealthWith probes a single scraper (which may be nil) and classifies

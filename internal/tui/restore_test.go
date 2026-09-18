@@ -7,7 +7,7 @@ import (
 )
 
 // TestTerminalResetSequenceCompleteness locks in the exact set of resets the exit
-// cleanup must emit. A broken shell prompt after GoAnime exits is caused by one
+// cleanup must emit. A broken shell prompt after GonimeId exits is caused by one
 // of these private terminal modes being left enabled; if a future change drops
 // one of these sequences, this test fails before the regression can ship.
 func TestTerminalResetSequenceCompleteness(t *testing.T) {

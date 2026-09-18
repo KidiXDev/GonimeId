@@ -15,10 +15,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/scraper/netx"
+	"github.com/KidiXDev/GonimeId/internal/util"
 	"github.com/PuerkitoBio/goquery"
-	"github.com/alvarorichard/Goanime/internal/models"
-	"github.com/alvarorichard/Goanime/internal/scraper/netx"
-	"github.com/alvarorichard/Goanime/internal/util"
 )
 
 const (

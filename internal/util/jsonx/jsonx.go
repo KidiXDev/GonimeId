@@ -1,4 +1,4 @@
-// Package jsonx wraps encoding/json/v2 (Go 1.27) with the leniency GoAnime needs
+// Package jsonx wraps encoding/json/v2 (Go 1.27) with the leniency GonimeId needs
 // when decoding responses from anime/metadata providers.
 //
 // # Why not encoding/json

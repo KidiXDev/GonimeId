@@ -6,17 +6,17 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alvarorichard/Goanime/internal/scraper/netx"
-	"github.com/alvarorichard/Goanime/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/scraper/netx"
+	"github.com/KidiXDev/GonimeId/internal/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // Issue #184: AniList answers browser User-Agents with a 403 ("The AniList API
 // has been temporarily disabled due to severe stability issues") while serving
-// plain API clients normally. GoAnime used to lose because the shared surf
+// plain API clients normally. GonimeId used to lose because the shared surf
 // clients impersonate Chrome and REWRITE the User-Agent to a browser one, so the
-// bare "GoAnime/1.0" the code set never reached the wire.
+// bare "GonimeId/1.0" the code set never reached the wire.
 //
 // The invariant these tests pin: AniList requests must carry a NON-browser UA,
 // which means they must not travel on the shared/impersonating clients.
@@ -31,7 +31,7 @@ func TestAPIUserAgent_IsNotBrowserLike(t *testing.T) {
 		assert.NotContains(t, netx.APIUserAgent, marker,
 			"AniList rejects browser-shaped User-Agents with a 403 — %q must not appear", marker)
 	}
-	assert.Contains(t, netx.APIUserAgent, "GoAnime", "the UA should still identify the app")
+	assert.Contains(t, netx.APIUserAgent, "GonimeId", "the UA should still identify the app")
 }
 
 // TestAniListPost_SendsNonBrowserUserAgent is the real regression guard: it

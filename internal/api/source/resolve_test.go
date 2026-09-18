@@ -1,10 +1,10 @@
 package source
 
 import (
-	"github.com/alvarorichard/Goanime/internal/scraper"
+	"github.com/KidiXDev/GonimeId/internal/scraper"
 	"testing"
 
-	"github.com/alvarorichard/Goanime/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -115,14 +115,6 @@ func TestResolve_URLPatterns(t *testing.T) {
 	}
 }
 
-func TestResolve_PTBRFallback(t *testing.T) {
-	registerProductionLikeSources(t)
-	src, got := Resolve(&models.Anime{Name: "Naruto [PT-BR]"})
-	assert.Equal(t, AnimeFire, got.Kind, "[PT-BR] tag without source should default to AnimeFire")
-	require.NotNil(t, src)
-	assert.Equal(t, AnimeFire, src.Describe().Kind)
-}
-
 func TestResolve_NilAnime(t *testing.T) {
 	registerProductionLikeSources(t)
 	src, got := Resolve(nil)
@@ -171,14 +163,16 @@ func TestResolveURL_ProductionDescriptors(t *testing.T) {
 
 func TestScraperTypeFor(t *testing.T) {
 	t.Parallel()
-	st, ok := ScraperTypeFor(AniDB)
-	require.True(t, ok, "ScraperTypeFor(AniDB) should return true")
-	assert.Equal(t, scraper.AniDBType, st)
+	st, ok := ScraperTypeFor(Otakudesu)
+	require.True(t, ok, "ScraperTypeFor(Otakudesu) should return true")
+	assert.Equal(t, scraper.OtakudesuType, st)
 
-	st, ok = ScraperTypeFor(AnimeFire)
+	st, ok = ScraperTypeFor(Samehadaku)
 	require.True(t, ok)
-	assert.Equal(t, scraper.AnimefireType, st,
-		"AnimefireType became the iota zero value when AllAnimeType was removed")
+	assert.Equal(t, scraper.SamehadakuType, st)
+
+	_, ok = ScraperTypeFor(AniDB)
+	assert.False(t, ok, "fake test kinds are not mapped to a scraper")
 
 	_, ok = ScraperTypeFor(Unknown)
 	assert.False(t, ok, "ScraperTypeFor(Unknown) should return false")

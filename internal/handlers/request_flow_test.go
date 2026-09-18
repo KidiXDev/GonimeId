@@ -12,10 +12,10 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/alvarorichard/Goanime/internal/models"
-	"github.com/alvarorichard/Goanime/internal/updater"
-	"github.com/alvarorichard/Goanime/internal/upscaler"
-	"github.com/alvarorichard/Goanime/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/updater"
+	"github.com/KidiXDev/GonimeId/internal/upscaler"
+	"github.com/KidiXDev/GonimeId/internal/util"
 	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -134,30 +134,6 @@ func TestHandleDownloadRequest_PropagatesDownloadError(t *testing.T) {
 	if err != nil {
 		assert.Contains(t, err.Error(), "download failed")
 	}
-}
-
-func TestHandleMovieDownloadRequest_NilGlobal(t *testing.T) {
-	prev := util.GlobalDownloadRequest
-	util.GlobalDownloadRequest = nil
-	t.Cleanup(func() { util.GlobalDownloadRequest = prev })
-
-	err := HandleMovieDownloadRequest()
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "movie download request is nil")
-}
-
-func TestHandleMovieDownloadRequest_PropagatesError(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		// Same Windows fuzzy-finder hang as TestHandleDownloadRequest_PropagatesDownloadError.
-		t.Skip("Windows fuzzy-finder cannot be driven from headless tests")
-	}
-	prev := util.GlobalDownloadRequest
-	util.GlobalDownloadRequest = &util.DownloadRequest{}
-	t.Cleanup(func() { util.GlobalDownloadRequest = prev })
-
-	err := HandleMovieDownloadRequest()
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "no longer supported")
 }
 
 // --- SearchMedia ---

@@ -5,16 +5,16 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/alvarorichard/Goanime/internal/api"
-	"github.com/alvarorichard/Goanime/internal/api/source"
-	"github.com/alvarorichard/Goanime/internal/appflow"
-	"github.com/alvarorichard/Goanime/internal/discord"
-	"github.com/alvarorichard/Goanime/internal/models"
-	"github.com/alvarorichard/Goanime/internal/playback"
-	"github.com/alvarorichard/Goanime/internal/player"
-	"github.com/alvarorichard/Goanime/internal/tracking"
-	"github.com/alvarorichard/Goanime/internal/util"
-	"github.com/alvarorichard/Goanime/internal/version"
+	"github.com/KidiXDev/GonimeId/internal/api"
+	"github.com/KidiXDev/GonimeId/internal/api/source"
+	"github.com/KidiXDev/GonimeId/internal/appflow"
+	"github.com/KidiXDev/GonimeId/internal/discord"
+	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/playback"
+	"github.com/KidiXDev/GonimeId/internal/player"
+	"github.com/KidiXDev/GonimeId/internal/tracking"
+	"github.com/KidiXDev/GonimeId/internal/util"
+	"github.com/KidiXDev/GonimeId/internal/version"
 )
 
 // HandlePlaybackMode processes normal anime playback
@@ -31,14 +31,14 @@ func HandlePlaybackMode(animeName string) {
 	util.InitLogger()
 
 	// Confirm the manual kill-switch (S1) visibly: if the user disabled any
-	// source via GOANIME_DISABLED_SOURCES, say so once at startup so a turned-
+	// source via GONIMEID_DISABLED_SOURCES, say so once at startup so a turned-
 	// off source is never a silent surprise (R5).
 	if disabled := source.DisabledSources(); len(disabled) > 0 {
 		names := make([]string, len(disabled))
 		for i, k := range disabled {
 			names[i] = string(k)
 		}
-		util.Warnf("Sources disabled by config (GOANIME_DISABLED_SOURCES): %s", strings.Join(names, ", "))
+		util.Warnf("Sources disabled by config (GONIMEID_DISABLED_SOURCES): %s", strings.Join(names, ", "))
 	}
 
 	// Pre-warm connections are now started in main() so they run while the
@@ -46,7 +46,7 @@ func HandlePlaybackMode(animeName string) {
 	util.PreWarmConnections()
 
 	tracking.HandleTrackingNotice()
-	util.Debugf("[PERF] starting Goanime v%s", version.Version)
+	util.Debugf("[PERF] starting GonimeId v%s", version.Version)
 
 	// Discord init runs in background - doesn't block startup
 	discordManager := discord.NewManager()

@@ -29,7 +29,7 @@ var mpvSockCounter atomic.Uint64
 func startMockMPVSocket(t *testing.T, handler func(req map[string]any) []byte) string {
 	t.Helper()
 	n := mpvSockCounter.Add(1)
-	sock := filepath.Join(string(filepath.Separator), "tmp", fmt.Sprintf("goanime_mpv_%d_%d.sock", os.Getpid(), n))
+	sock := filepath.Join(string(filepath.Separator), "tmp", fmt.Sprintf("gonimeid_mpv_%d_%d.sock", os.Getpid(), n))
 	require.LessOrEqual(t, len(sock), 100, "socket path too long for unix-socket limit")
 
 	ln, err := net.Listen("unix", sock)
@@ -119,7 +119,7 @@ func TestMpvSendCommand_SkipsPropertyUnavailable(t *testing.T) {
 
 func TestMpvSendCommand_DialError(t *testing.T) {
 	t.Parallel()
-	_, err := mpvSendCommand("/tmp/goanime_mpv_does_not_exist.sock", []any{"ping"})
+	_, err := mpvSendCommand("/tmp/gonimeid_mpv_does_not_exist.sock", []any{"ping"})
 	require.Error(t, err)
 }
 
@@ -333,6 +333,6 @@ func TestDialMPVSocket_ConnectsToExistingListener(t *testing.T) {
 
 func TestDialMPVSocket_ErrorOnMissingSocket(t *testing.T) {
 	t.Parallel()
-	_, err := dialMPVSocket("/tmp/goanime_mpv_does_not_exist.sock")
+	_, err := dialMPVSocket("/tmp/gonimeid_mpv_does_not_exist.sock")
 	require.Error(t, err)
 }
