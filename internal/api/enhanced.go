@@ -248,6 +248,12 @@ func searchAnimeEnhanced(
 		registryKinds = []apisource.SourceKind{apisource.SuperFlix}
 	case "anidb":
 		registryKinds = []apisource.SourceKind{apisource.AniDB}
+	case "otakudesu":
+		registryKinds = []apisource.SourceKind{apisource.Otakudesu}
+	case "samehadaku":
+		registryKinds = []apisource.SourceKind{apisource.Samehadaku}
+	case "id", "indo", "indonesian":
+		registryKinds = []apisource.SourceKind{apisource.Otakudesu, apisource.Samehadaku}
 	case "ptbr", "pt-br":
 		registryKinds = []apisource.SourceKind{apisource.AnimeFire, apisource.Goyabu, apisource.SuperFlix}
 	}
@@ -291,6 +297,10 @@ func searchAnimeEnhanced(
 				anime.Source = "SuperFlix"
 			case "anidb":
 				anime.Source = "AniDB"
+			case "otakudesu":
+				anime.Source = "Otakudesu"
+			case "samehadaku":
+				anime.Source = "Samehadaku"
 			}
 			if anime.Source == "" {
 				lowerURL := strings.ToLower(anime.URL)
@@ -303,6 +313,10 @@ func searchAnimeEnhanced(
 					anime.Source = "SuperFlix"
 				case strings.Contains(lowerURL, "anidb.app"):
 					anime.Source = "AniDB"
+				case strings.Contains(lowerURL, "otakudesu"):
+					anime.Source = "Otakudesu"
+				case strings.Contains(lowerURL, "samehadaku"):
+					anime.Source = "Samehadaku"
 				}
 			}
 		}
@@ -318,6 +332,8 @@ func searchAnimeEnhanced(
 		"SuperFlix", breakdown.SuperFlix,
 		"Goyabu", breakdown.Goyabu,
 		"AniDB", breakdown.AniDB,
+		"Otakudesu", breakdown.Otakudesu,
+		"Samehadaku", breakdown.Samehadaku,
 	)
 
 	// Sort results by language priority: Portuguese first, then Multilanguage, Movies/TV, English, others
@@ -933,10 +949,12 @@ func GetSuperFlixStreamURL(media *models.Anime, episode *models.Episode, quality
 // diagnostic line. Counted via countSourceBreakdown so the predicate stays
 // testable in isolation.
 type sourceBreakdown struct {
-	AnimeFire int
-	SuperFlix int
-	Goyabu    int
-	AniDB     int
+	AnimeFire  int
+	SuperFlix  int
+	Goyabu     int
+	AniDB      int
+	Otakudesu  int
+	Samehadaku int
 }
 
 // countSourceBreakdown tallies anime results by Source field using
@@ -958,6 +976,10 @@ func countSourceBreakdown(animes []*models.Anime) sourceBreakdown {
 			b.Goyabu++
 		case anime.Source == "AniDB":
 			b.AniDB++
+		case anime.Source == "Otakudesu":
+			b.Otakudesu++
+		case anime.Source == "Samehadaku":
+			b.Samehadaku++
 		}
 	}
 	return b
@@ -974,7 +996,7 @@ func languagePriority(name string) int {
 	switch {
 	case strings.HasPrefix(lower, "[multilanguage]"):
 		return 1
-	case strings.HasPrefix(lower, "[english]"):
+	case strings.HasPrefix(lower, "[english]"), strings.HasPrefix(lower, "[indonesian]"):
 		return 2
 	case strings.HasPrefix(lower, "[movie]") || strings.HasPrefix(lower, "[tv]") || strings.HasPrefix(lower, "[movies/tv]"):
 		return 3

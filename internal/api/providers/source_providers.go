@@ -3,6 +3,8 @@ package providers
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
 	"sync"
 
 	"github.com/alvarorichard/Goanime/internal/api"
@@ -10,7 +12,9 @@ import (
 	"github.com/alvarorichard/Goanime/internal/models"
 	"github.com/alvarorichard/Goanime/internal/scraper"
 	"github.com/alvarorichard/Goanime/internal/scraper/providers/superflix"
+	"github.com/alvarorichard/Goanime/internal/tui"
 	"github.com/alvarorichard/Goanime/internal/util"
+	"golang.org/x/term"
 )
 
 // Stream-fetch indirections. Production points at the proven api layer — the
@@ -401,4 +405,149 @@ func (p *superFlixProvider) FetchStreamURL(ctx context.Context, episode *models.
 		util.SetGlobalAnimeSource(anime.Source)
 	}
 	return superFlixStreamFn(anime, episode, quality)
+}
+
+// --- Indonesian-subtitled providers (Otakudesu, Samehadaku) ---
+//
+// Both leaf clients are context-aware and share one adapter shape, so a single
+// provider type parameterised by descriptor serves them. Priorities 60/70 sit
+// below AniDB: they are the newest sources and only match by explicit Source
+// or their own host in the URL.
+
+type idSubProvider struct {
+	once    sync.Once
+	adapter adapterSlot
+	desc    source.Descriptor
+	st      scraper.ScraperType
+}
+
+func init() {
+	source.Register(&idSubProvider{
+		st: scraper.OtakudesuType,
+		desc: source.Descriptor{
+			Kind:        source.Otakudesu,
+			Priority:    60,
+			Explicit:    []string{"Otakudesu"},
+			Tags:        []string{"[otakudesu]"},
+			URLMatchers: []string{"otakudesu"},
+			ProbeURL:    "https://otakudesu.blog",
+		},
+	})
+	source.Register(&idSubProvider{
+		st: scraper.SamehadakuType,
+		desc: source.Descriptor{
+			Kind:        source.Samehadaku,
+			Priority:    70,
+			Explicit:    []string{"Samehadaku"},
+			Tags:        []string{"[samehadaku]"},
+			URLMatchers: []string{"samehadaku"},
+			ProbeURL:    "https://v2.samehadaku.how",
+		},
+	})
+}
+
+func (p *idSubProvider) scraper() (scraper.UnifiedScraper, error) {
+	return lazyGetAdapter(&p.once, &p.adapter, p.st)
+}
+
+func (p *idSubProvider) Describe() source.Descriptor { return p.desc }
+
+func (p *idSubProvider) HasSeasons() bool { return false }
+
+func (p *idSubProvider) Search(ctx context.Context, query string) ([]*models.Anime, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	adapter, err := p.scraper()
+	if err != nil {
+		return nil, err
+	}
+	var results []*models.Anime
+	if ca, ok := adapter.(scraper.ContextualScraper); ok {
+		results, err = ca.SearchAnimeContext(ctx, query)
+	} else {
+		results, err = adapter.SearchAnime(query)
+	}
+	if err != nil {
+		return nil, err
+	}
+	tagResults(results, p.desc.Kind)
+	return results, nil
+}
+
+func (p *idSubProvider) FetchEpisodes(ctx context.Context, anime *models.Anime) ([]models.Episode, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	adapter, err := p.scraper()
+	if err != nil {
+		return nil, err
+	}
+	if ca, ok := adapter.(scraper.ContextualScraper); ok {
+		return ca.GetAnimeEpisodesContext(ctx, anime.URL)
+	}
+	return adapter.GetAnimeEpisodes(anime.URL)
+}
+
+func (p *idSubProvider) FetchStreamURL(ctx context.Context, episode *models.Episode, anime *models.Anime, quality string) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	util.ClearGlobalSubtitles()
+	if anime.Source != "" {
+		util.SetGlobalAnimeSource(anime.Source)
+	}
+	adapter, err := p.scraper()
+	if err != nil {
+		return "", err
+	}
+	quality, err = pickQuality(ctx, adapter, episode.URL, quality)
+	if err != nil {
+		return "", err
+	}
+	var url string
+	if ca, ok := adapter.(scraper.ContextualScraper); ok {
+		url, _, err = ca.GetStreamURLContext(ctx, episode.URL, quality)
+	} else {
+		url, _, err = adapter.GetStreamURL(episode.URL, quality)
+	}
+	if err != nil {
+		return "", fmt.Errorf("%s stream: %w", strings.ToLower(string(p.desc.Kind)), err)
+	}
+	if url == "" {
+		return "", fmt.Errorf("empty stream URL returned from %s", p.desc.Kind)
+	}
+	return url, nil
+}
+
+// pickQuality asks which resolution to play when no --quality was given and
+// the source offers more than one — the same UX as AnimeFire's picker. The
+// choice is kept in util.GlobalQuality for the rest of the session, so the
+// next episode does not ask again. Without a terminal the source's default
+// ("best") is used. Esc/quit is reported as tui.ErrPickBack for the player to
+// route back to the episode list.
+func pickQuality(ctx context.Context, adapter scraper.UnifiedScraper, episodeURL, quality string) (string, error) {
+	if quality != "" && quality != "best" {
+		return quality, nil
+	}
+	ql, ok := adapter.(scraper.QualityLister)
+	if !ok || !term.IsTerminal(int(os.Stdin.Fd())) {
+		return quality, nil
+	}
+	qualities, err := ql.Qualities(ctx, episodeURL)
+	if err != nil || len(qualities) < 2 {
+		return quality, nil // nothing to choose; the resolver reports the real error
+	}
+	idx, err := tui.PickLabels(qualities, tui.PickOptions{
+		Breadcrumb:   "Playback > Quality",
+		WindowTitle:  "GoAnime - Quality",
+		ItemSingular: "quality",
+		ItemPlural:   "qualities",
+	})
+	if err != nil {
+		return "", err
+	}
+	util.GlobalQuality = qualities[idx]
+	util.Debug("Quality picked", "quality", qualities[idx], "offered", qualities)
+	return qualities[idx], nil
 }

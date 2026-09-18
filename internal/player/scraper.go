@@ -442,10 +442,14 @@ func GetVideoURLForEpisodeEnhanced(ctx context.Context, episode *models.Episode,
 			util.Debug("Movie/TV stream URL failed", "source", sourceLabel, "error", err)
 			return "", fmt.Errorf("failed to get %s stream URL: %w", sourceLabel, err)
 		}
-		if resolved.Kind == source.AniDB {
+		switch resolved.Kind {
+		case source.AniDB, source.Otakudesu, source.Samehadaku:
 			// Registry-backed source: surface the real error instead of falling
 			// back to the legacy scraper, which knows nothing about it. (This
 			// guard used to name AllAnime, which held the same position.)
+			if errors.Is(err, tui.ErrPickBack) || errors.Is(err, tui.ErrPickCancelled) {
+				return "", ErrBackToEpisodeSelection // Esc in the quality picker
+			}
 			return "", fmt.Errorf("failed to get %s stream URL: %w", resolved.Kind, err)
 		}
 		// Legacy silent fallback for the remaining sources — removed in Phase 2.

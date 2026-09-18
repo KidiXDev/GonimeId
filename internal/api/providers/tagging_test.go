@@ -16,6 +16,16 @@ func TestTagResults_AniDBEnglish(t *testing.T) {
 	assert.Equal(t, "AniDB", res[0].Source)
 }
 
+func TestTagResults_IndonesianSources(t *testing.T) {
+	t.Parallel()
+	for _, kind := range []source.SourceKind{source.Otakudesu, source.Samehadaku} {
+		res := []*models.Anime{{Name: "Naruto", URL: "id1"}}
+		tagResults(res, kind)
+		assert.Equal(t, "[Indonesian] Naruto", res[0].Name)
+		assert.Equal(t, string(kind), res[0].Source)
+	}
+}
+
 func TestTagResults_AnimeFirePTBRAndSource(t *testing.T) {
 	t.Parallel()
 	res := []*models.Anime{{Name: "Naruto Dublado", URL: "https://animefire.plus/dublado/x"}}

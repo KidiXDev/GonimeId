@@ -34,16 +34,24 @@ func sourceDisplayName(kind source.SourceKind) string {
 		return "SuperFlix"
 	case source.AniDB:
 		return "AniDB"
+	case source.Otakudesu:
+		return "Otakudesu"
+	case source.Samehadaku:
+		return "Samehadaku"
 	default:
 		return string(kind)
 	}
 }
 
 func languageTag(kind source.SourceKind) string {
-	if kind == source.AniDB {
+	switch kind {
+	case source.AniDB:
 		return "[English]"
+	case source.Otakudesu, source.Samehadaku:
+		return "[Indonesian]"
+	default:
+		return "[PT-BR]"
 	}
-	return "[PT-BR]"
 }
 
 // cleanPTBRTitle strips dub/leg labels, age/numeric ratings, and media-type
@@ -69,6 +77,7 @@ func tagResults(results []*models.Anime, kind source.SourceKind) {
 		}
 
 		hasLanguageTag := strings.Contains(anime.Name, "[English]") ||
+			strings.Contains(anime.Name, "[Indonesian]") ||
 			strings.Contains(anime.Name, "[PT-BR]") ||
 			strings.Contains(anime.Name, "[Portuguese]") ||
 			strings.Contains(anime.Name, "[Português]") ||

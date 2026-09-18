@@ -7,12 +7,13 @@ This integration adds powerful web scraping capabilities to GoAnime, inspired by
 ### Multi-Source Support
 - **anidb.app**: Subbed and dubbed HLS streams with multiple resolutions
 - **Animefire.io**: Brazilian anime streaming site with Portuguese content
+- **Otakudesu** / **Samehadaku**: Indonesian-subtitled anime (`--source otakudesu`, `--source samehadaku`, or `--source id` for both)
 - **Automatic Fallback**: If one source fails, automatically tries others
 
 ### Enhanced CLI Options
 ```bash
 # New command-line flags
---source <source>     # Specify source (anidb, animefire, goyabu, superflix)
+--source <source>     # Specify source (anidb, animefire, goyabu, superflix, otakudesu, samehadaku; groups: ptbr, id)
 --quality <quality>   # Specify video quality (best, worst, 720p, 1080p, etc.)
 ```
 

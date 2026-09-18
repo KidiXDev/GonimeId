@@ -104,7 +104,7 @@ func (p *goyabuProvider) Describe() source.Descriptor {
 | `DefaultDisabled` | ships off unless `GOANIME_ENABLED_SOURCES` names it | shipping live |
 | `ProbeURL` | homepage; HEAD-probed on search timeout to tell "site down" from "opaque hang" | GraphQL/opaque APIs, browser-gated sources |
 
-Priorities in use: AnimeFire `10` · Goyabu `20` · SuperFlix `30` · AniDB `50`.
+Priorities in use: AnimeFire `10` · Goyabu `20` · SuperFlix `30` · AniDB `50` · Otakudesu `60` · Samehadaku `70`.
 Leave gaps of 10. Priority is ignored when `anime.Source` matches an `Explicit`
 entry.
 
@@ -115,8 +115,10 @@ them and the previous episode's subtitles leak into this one.
 **Capabilities** are discovered by type assertion, not by a flag. Implement only
 what is true: `HasSeasons() bool` → `source.Seasoned` · `WarmUp(ctx) error` →
 `source.BrowserGated` (called before every stream fetch; see `superFlixProvider`)
-· `Search(ctx, query)` → `source.Searchable`. **A source without `Search` is
-silently excluded from the search fan-out** — it can still play by URL.
+· `Search(ctx, query)` → `source.Searchable` · `Qualities(ctx, episodeURL)` on
+the adapter → `scraper.QualityLister` (the provider then shows a resolution
+picker when no `--quality` was given; see `pickQuality`). **A source without
+`Search` is silently excluded from the search fan-out** — it can still play by URL.
 
 **5–11.** Mechanical; follow the table. One trap: `sourceDisplayName` must return
 a string that appears in your `Descriptor.Explicit`, or a saved anime will not

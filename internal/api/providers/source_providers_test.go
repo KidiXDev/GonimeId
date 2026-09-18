@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"testing"
 
 	"github.com/alvarorichard/Goanime/internal/api/source"
@@ -130,7 +131,7 @@ func TestSuperFlixProvider_Scraper(t *testing.T) {
 // Model B registry with every live source.
 func TestSourceRegistry_LiveSourcesRegistered(t *testing.T) {
 	t.Parallel()
-	for _, kind := range []source.SourceKind{source.AniDB, source.AnimeFire, source.Goyabu, source.SuperFlix, source.AniDB} {
+	for _, kind := range []source.SourceKind{source.AniDB, source.AnimeFire, source.Goyabu, source.SuperFlix, source.Otakudesu, source.Samehadaku} {
 		s, ok := source.Registered(kind)
 		require.True(t, ok, "source %s must be registered", kind)
 		assert.Equal(t, kind, s.Describe().Kind)
@@ -154,6 +155,9 @@ func TestResolve_LiveRegistry(t *testing.T) {
 		{"explicit SuperFlix", &models.Anime{Source: "SuperFlix"}, source.SuperFlix},
 		{"explicit wins over URL", &models.Anime{Source: "Goyabu", URL: "https://animefire.plus/x"}, source.Goyabu},
 		{"english tag", &models.Anime{Name: "Naruto [English]"}, source.AniDB},
+		{"explicit Otakudesu", &models.Anime{Source: "Otakudesu"}, source.Otakudesu},
+		{"otakudesu URL", &models.Anime{URL: "https://otakudesu.blog/anime/naruto-sub-indo/"}, source.Otakudesu},
+		{"samehadaku URL", &models.Anime{URL: "https://v2.samehadaku.how/anime/naruto-kecil/"}, source.Samehadaku},
 		{"animefire tag", &models.Anime{Name: "Naruto [AnimeFire]"}, source.AnimeFire},
 		{"goyabu URL", &models.Anime{URL: "https://goyabu.to/naruto"}, source.Goyabu},
 		{"superflix URL", &models.Anime{URL: "https://superflix.to/naruto"}, source.SuperFlix},
@@ -195,5 +199,35 @@ func TestResolveURL_LiveRegistry(t *testing.T) {
 			_, resolved := source.ResolveURL(tt.url)
 			assert.Equal(t, tt.wantKind, resolved.Kind, "reason: %s", resolved.Reason)
 		})
+	}
+}
+
+// fakeLister is a UnifiedScraper that also advertises QualityLister; Qualities
+// must never be called when there is no terminal to show a picker on.
+type fakeLister struct {
+	scraper.UnifiedScraper
+	called bool
+}
+
+func (f *fakeLister) Qualities(context.Context, string) ([]string, error) {
+	f.called = true
+	return []string{"720p", "480p"}, nil
+}
+
+// TestPickQuality_NoTerminalKeepsDefault pins the headless behaviour (CI, a
+// pipe): an explicit quality passes through, and "best" stays "best" without
+// touching the source, so nothing can block waiting on a picker.
+func TestPickQuality_NoTerminalKeepsDefault(t *testing.T) {
+	// Not parallel: relies on the process having no TTY on stdin, which is
+	// true under `go test` but is process-wide state.
+	for _, q := range []string{"", "best", "720p"} {
+		f := &fakeLister{}
+		got, err := pickQuality(context.Background(), f, "https://otakudesu.blog/episode/x/", q)
+		require.NoError(t, err)
+		assert.Equal(t, q, got)
+		if q == "720p" {
+			continue
+		}
+		assert.False(t, f.called, "no terminal → no picker → Qualities must not be fetched")
 	}
 }
