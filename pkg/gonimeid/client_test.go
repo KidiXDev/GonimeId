@@ -23,24 +23,15 @@ func TestGetAvailableSources(t *testing.T) {
 		t.Fatal("No sources available")
 	}
 
-	// Check if expected sources are present
-	hasAllAnime := false
-	hasAnimeFire := false
-
+	// Both live sources must be listed.
+	seen := map[types.Source]bool{}
 	for _, source := range sources {
-		if source == types.SourceOtakudesu {
-			hasAllAnime = true
-		}
-		if source == types.SourceOtakudesu {
-			hasAnimeFire = true
-		}
+		seen[source] = true
 	}
-
-	if !hasAllAnime {
-		t.Error("AllAnime source not found")
-	}
-	if !hasAnimeFire {
-		t.Error("AnimeFire source not found")
+	for _, want := range []types.Source{types.SourceOtakudesu, types.SourceSamehadaku} {
+		if !seen[want] {
+			t.Errorf("%s source not found", want)
+		}
 	}
 }
 

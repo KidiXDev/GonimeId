@@ -46,28 +46,7 @@ const downloadUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit
 
 const minDownloadedVideoSize int64 = 10 * 1024 * 1024
 
-// Bundled media-tool installers used when ffmpeg/ffprobe are missing from
-// PATH. They download static builds via the go-ytdlp cache (the same
-// mechanism that fetches yt-dlp). Package-level so tests can stub them
-// without hitting the network.
-var (
-	installFFmpegFunc = func(ctx context.Context) (string, error) {
-		resolved, err := ytdlp.InstallFFmpeg(ctx, nil)
-		if err != nil {
-			return "", err
-		}
-		return resolved.Executable, nil
-	}
-	installFFprobeFunc = func(ctx context.Context) (string, error) {
-		resolved, err := ytdlp.InstallFFprobe(ctx, nil)
-		if err != nil {
-			return "", err
-		}
-		return resolved.Executable, nil
-	}
-)
-
-// validateDownloadedVideo prevents CDN error pages (for example SuperFlix's
+// validateDownloadedVideo prevents CDN error pages (for example a host's
 // 14-byte "security error") from ever being reported as a completed download.
 func validateDownloadedVideo(path string) error {
 	stat, err := os.Stat(path)

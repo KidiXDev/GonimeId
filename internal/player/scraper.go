@@ -238,7 +238,7 @@ var genericEpisodeTitleRe = regexp.MustCompile(`(?i)\bepisode\s+(\d+)\s*$`)
 // episode "<Anime> Episode N", which repeated the anime name on every row.
 func episodeLabel(ep models.Episode) string {
 	title := episodeDisplayTitle(ep)
-	if m := genericEpisodeTitleRe.FindStringSubmatch(title); m != nil && m[1] == strings.TrimSpace(ep.Number) {
+	if m := genericEpisodeTitleRe.FindStringSubmatch(title); len(m) > 1 && m[1] == strings.TrimSpace(ep.Number) {
 		return "Episode " + ep.Number
 	}
 	if title == "" {

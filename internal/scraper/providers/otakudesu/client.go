@@ -265,7 +265,7 @@ func (c *OtakudesuClient) Qualities(ctx context.Context, episodeURL string) ([]s
 // The download section's Pixeldrain files go before the streaming mirrors:
 // they reach 1080p (the mirrors stop at 720p), they are plain files mpv can
 // seek in, and they never carry an IP-locked URL.
-func (c *OtakudesuClient) GetEpisodeStreamURL(ctx context.Context, episodeURL, quality string) (string, map[string]string, error) {
+func (c *OtakudesuClient) GetEpisodeStreamURL(ctx context.Context, episodeURL, quality string) (streamURL string, metadata map[string]string, err error) {
 	body, err := c.fetch(ctx, episodeURL, "episode", nil)
 	if err != nil {
 		return "", nil, err
@@ -368,7 +368,7 @@ func (c *OtakudesuClient) resolveEmbed(ctx context.Context, embedURL string) str
 		return ""
 	}
 	for _, re := range []*regexp.Regexp{sourceSrcRe, playerFileRe} {
-		if m := re.FindSubmatch(body); m != nil && strings.HasPrefix(string(m[1]), "http") {
+		if m := re.FindSubmatch(body); len(m) > 1 && strings.HasPrefix(string(m[1]), "http") {
 			if u := html.UnescapeString(string(m[1])); c.playable(ctx, u) {
 				return u
 			}
@@ -472,8 +472,8 @@ func parseMirrors(doc *goquery.Document) []mirror {
 	return out
 }
 
-func iframeSrc(html string) string {
-	if m := iframeSrcRe.FindStringSubmatch(html); m != nil {
+func iframeSrc(markup string) string {
+	if m := iframeSrcRe.FindStringSubmatch(markup); m != nil {
 		return m[1]
 	}
 	return ""

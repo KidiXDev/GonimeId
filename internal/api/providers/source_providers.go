@@ -178,8 +178,13 @@ func pickQuality(ctx context.Context, adapter scraper.UnifiedScraper, episodeURL
 		return quality, nil
 	}
 	qualities, err := ql.Qualities(ctx, episodeURL)
-	if err != nil || len(qualities) < 2 {
-		return quality, nil // nothing to choose; the resolver reports the real error
+	if err != nil {
+		// Listing is best-effort: the resolver will report the real error.
+		util.Debug("Quality listing failed; playing the source default", "error", err)
+		return quality, nil
+	}
+	if len(qualities) < 2 {
+		return quality, nil // nothing to choose
 	}
 	idx, err := tui.PickLabels(qualities, tui.PickOptions{
 		Breadcrumb:   "Episodes › Quality",

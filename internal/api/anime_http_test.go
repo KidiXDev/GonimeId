@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"sync/atomic"
 	"testing"
 
@@ -15,18 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-// skipUnlessLiveBrowser skips tests whose only code path drives a real headed
-// browser (SuperFlix's Cloudflare Turnstile solver). There is no injection seam
-// at the api layer, so on runners with system Chrome present these tests launch
-// a live browser, run for minutes, and trip the race detector inside
-// playwright-go's frame dispatcher. Set GONIMEID_LIVE_BROWSER_TESTS=1 to run them.
-func skipUnlessLiveBrowser(t *testing.T) {
-	t.Helper()
-	if os.Getenv("GONIMEID_LIVE_BROWSER_TESTS") == "" {
-		t.Skip("skipping live headed-browser test; set GONIMEID_LIVE_BROWSER_TESTS=1 to run")
-	}
-}
 
 // withJikan swaps jikanBaseURL for the given test server URL and restores it
 // at test end. Tests using this MUST run serially (no t.Parallel) because

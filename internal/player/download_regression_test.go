@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"charm.land/log/v2"
 	"github.com/KidiXDev/GonimeId/internal/scraper/netx"
 	"github.com/KidiXDev/GonimeId/internal/util"
 	"github.com/stretchr/testify/assert"
@@ -158,40 +157,4 @@ func TestDownloadDirectHTTPWithClientReturnsHTTPStatusErrorFromMockCDN(t *testin
 
 	_, statErr := os.Stat(outPath)
 	assert.True(t, os.IsNotExist(statErr), "404 response must not create a completed file")
-}
-
-func installDownloadRangeTestState(outputDir string) func() {
-	media := snapshotMedia()
-	output := util.GlobalOutputDir
-	quality := util.GlobalQuality
-	subs := append([]util.SubtitleInfo(nil), util.GlobalSubtitles...)
-	source := util.GlobalAnimeSource
-	request := util.GlobalDownloadRequest
-	logger := util.Logger
-
-	util.GlobalOutputDir = outputDir
-	util.GlobalQuality = "best"
-	util.GlobalSubtitles = nil
-	util.GlobalAnimeSource = ""
-	util.GlobalDownloadRequest = nil
-	util.Logger = log.NewWithOptions(io.Discard, log.Options{Prefix: "player-test"})
-
-	return func() {
-		util.GlobalOutputDir = output
-		util.GlobalQuality = quality
-		util.GlobalSubtitles = subs
-		util.GlobalAnimeSource = source
-		util.GlobalDownloadRequest = request
-		util.Logger = logger
-
-		gMedia.mu.Lock()
-		gMedia.animeName = media.AnimeName
-		gMedia.animeSeason = media.AnimeSeason
-		gMedia.isMovieOrTV = media.IsMovieOrTV
-		gMedia.mediaType = media.MediaType
-		gMedia.animeURL = media.AnimeURL
-		gMedia.seasonMap = media.SeasonMap
-		gMedia.meta = media.Meta
-		gMedia.mu.Unlock()
-	}
 }

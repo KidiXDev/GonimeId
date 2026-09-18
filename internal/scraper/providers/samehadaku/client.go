@@ -244,7 +244,7 @@ func (c *SamehadakuClient) Qualities(ctx context.Context, episodeURL string) ([]
 // GetEpisodeStreamURL resolves an episode to a direct file or Blogger URL.
 // Pixeldrain servers of the requested height go first, then the rest by
 // height descending, then Blogspot (whose quality the player picks itself).
-func (c *SamehadakuClient) GetEpisodeStreamURL(ctx context.Context, episodeURL, quality string) (string, map[string]string, error) {
+func (c *SamehadakuClient) GetEpisodeStreamURL(ctx context.Context, episodeURL, quality string) (streamURL string, metadata map[string]string, err error) {
 	doc, err := c.document(ctx, episodeURL, "episode")
 	if err != nil {
 		return "", nil, err

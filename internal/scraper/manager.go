@@ -99,7 +99,7 @@ func (a *ctxAdapter) GetAnimeEpisodesContext(ctx context.Context, animeURL strin
 
 // GetStreamURLContext accepts an optional quality string ("best", "1080p", …)
 // as the first variadic option.
-func (a *ctxAdapter) GetStreamURLContext(ctx context.Context, episodeURL string, options ...any) (string, map[string]string, error) {
+func (a *ctxAdapter) GetStreamURLContext(ctx context.Context, episodeURL string, options ...any) (streamURL string, metadata map[string]string, err error) {
 	return a.client.GetEpisodeStreamURL(ctx, episodeURL, qualityOption(options))
 }
 
@@ -111,7 +111,7 @@ func (a *ctxAdapter) GetAnimeEpisodes(animeURL string) ([]models.Episode, error)
 	return a.GetAnimeEpisodesContext(context.Background(), animeURL)
 }
 
-func (a *ctxAdapter) GetStreamURL(episodeURL string, options ...any) (string, map[string]string, error) {
+func (a *ctxAdapter) GetStreamURL(episodeURL string, options ...any) (streamURL string, metadata map[string]string, err error) {
 	return a.GetStreamURLContext(context.Background(), episodeURL, options...)
 }
 

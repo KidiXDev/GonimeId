@@ -163,9 +163,9 @@ func (c *Client) GetEpisodeStreamURL(anime *types.Anime, episode *types.Episode,
 		}
 	}
 
-	// The episode URL is the direct episode page. (The AllAnime branch that
-	// passed an anime ID + episode number instead went with that source.)
-	return scr.GetStreamURL(episode.URL)
+	// The episode URL is the direct episode page; the quality option is the
+	// adapter's first variadic argument ("best", "1080p", …).
+	return scr.GetStreamURL(episode.URL, opts.Quality)
 }
 
 // NewClientForTest creates a Client backed by a custom Manager. Only for tests.

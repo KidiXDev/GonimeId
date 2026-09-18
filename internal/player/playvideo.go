@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	neturl "net/url"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -58,16 +57,6 @@ func appendPlaybackRefererArgs(mpvArgs []string, videoURL string, isHLSStream bo
 		return mpvArgs, ""
 	}
 	return append(mpvArgs, "--http-header-fields=Referer: "+referer), referer
-}
-
-// corsOriginOf reduces a Referer to its bare scheme://host, the value a browser
-// puts in Origin.
-func corsOriginOf(referer string) string {
-	u, err := neturl.Parse(referer)
-	if err != nil || u.Scheme == "" || u.Host == "" {
-		return ""
-	}
-	return u.Scheme + "://" + u.Host
 }
 
 // hlsAllowAllExtensionsArg relaxes ffmpeg's HLS segment-extension allowlist so

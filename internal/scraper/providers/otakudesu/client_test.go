@@ -1,6 +1,7 @@
 package otakudesu
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -217,7 +218,7 @@ func TestGetEpisodeStreamURL_MirrorsOnly(t *testing.T) {
 		require.NoError(t, err)
 		defer resp.Body.Close()
 		page, _ := io.ReadAll(resp.Body)
-		i := strings.Index(string(page), `<div class="mirrorstream">`)
+		i := bytes.Index(page, []byte(`<div class="mirrorstream">`))
 		_, _ = w.Write(page[i:]) // drop the download section
 	})
 	mirrorsOnly = httptest.NewServer(mux)

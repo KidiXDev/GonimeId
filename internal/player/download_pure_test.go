@@ -1,7 +1,6 @@
 package player
 
 import (
-	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -564,12 +563,4 @@ func TestAskAndPlayDownloadedEpisode_NoDownloadedExits(t *testing.T) {
 
 	err := askAndPlayDownloadedEpisode(nil, "https://example.com/anime/ask-and-play-test", 1, 3)
 	assert.NoError(t, err)
-}
-
-// mustJSON marshals v to bytes, failing the test on error.
-func mustJSON(t *testing.T, v any) []byte {
-	t.Helper()
-	b, err := json.Marshal(v)
-	require.NoError(t, err)
-	return b
 }
