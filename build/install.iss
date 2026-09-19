@@ -2,7 +2,7 @@
 ; This script is designed to be run from CI with files staged in the build directory
 
 #define MyAppName "GonimeId"
-#define MyAppVersion "1.8.7"
+#define MyAppVersion "1.0.0"
 #define MyAppPublisher "GonimeId Team"
 #define MyAppURL "https://github.com/KidiXDev/GonimeId"
 #define MyAppExeName "gonimeid.exe"
