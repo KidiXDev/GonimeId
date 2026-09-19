@@ -1,8 +1,8 @@
 # Adding and Removing a Source
 
 > **Reference implementation: `Samehadaku`** (`internal/scraper/providers/samehadaku`).
-> Both live sources are Indonesian-subtitled WordPress sites and share one
-> provider type (`idSubProvider` in `source_providers.go`); a third such source
+> The live sources are Indonesian-subtitled sites and share one
+> provider type (`idSubProvider` in `source_providers.go`); another such source
 > is a new leaf package plus one `source.Register` call. This document lists
 > *where* to copy from and *what* to change; it deliberately contains no
 > invented example code, because invented code in docs rots without anything
@@ -111,7 +111,7 @@ source.Register(&idSubProvider{
 | `DefaultDisabled` | ships off unless `GONIMEID_ENABLED_SOURCES` names it | shipping live |
 | `ProbeURL` | homepage; HEAD-probed on search timeout to tell "site down" from "opaque hang" | GraphQL/opaque APIs, browser-gated sources |
 
-Priorities in use: Otakudesu `10` · Samehadaku `20` · Nimegami `30`.
+Priorities in use: Otakudesu `10` · Samehadaku `20` · Nimegami `30` · YLnime `40`.
 Leave gaps of 10. Priority is ignored when `anime.Source` matches an `Explicit`
 entry.
 

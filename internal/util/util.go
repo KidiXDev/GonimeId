@@ -478,8 +478,8 @@ func FlagParser() (string, error) {
 	downloadFlag := fs.Bool("d", false, "download mode")
 	rangeFlag := fs.Bool("r", false, "download episode range (use with -d)")
 	allFlag := fs.Bool("a", false, "download ALL episodes (use with -d)")
-	sourceFlag := fs.String("source", "", "specify source (otakudesu, samehadaku, nimegami); default: search all")
-	qualityFlag := fs.String("quality", "best", "specify video quality (best, worst, 720p, 1080p, etc.)")
+	sourceFlag := fs.String("source", "", "specify source (otakudesu, samehadaku, nimegami, ylnime); default: search all")
+	qualityFlag := fs.String("quality", "best", "default download quality; interactive playback always asks per source")
 	outputDirFlag := fs.String("o", "", "output directory for downloads (default: ~/.local/gonimeid/downloads/anime/)")
 
 	// Upscale flags

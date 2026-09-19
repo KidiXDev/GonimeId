@@ -44,9 +44,9 @@ func EpisodeNumber(ep *models.Episode) string {
 	return ""
 }
 
-// --- Indonesian-subtitled providers (Otakudesu, Samehadaku, Nimegami) ---
+// --- Indonesian-subtitled providers ---
 //
-// Both leaf clients are context-aware and share one adapter shape, so a single
+// These leaf clients are context-aware and share one adapter shape, so a single
 // provider type parameterised by descriptor serves them. Otakudesu goes first:
 // its download section reaches 1080p.
 
@@ -89,6 +89,17 @@ func init() {
 			Tags:        []string{"[nimegami]"},
 			URLMatchers: []string{"nimegami"},
 			ProbeURL:    "https://nimegami.id",
+		},
+	})
+	source.Register(&idSubProvider{
+		st: scraper.YlnimeType,
+		desc: source.Descriptor{
+			Kind:        source.Ylnime,
+			Priority:    40,
+			Explicit:    []string{"YLnime"},
+			Tags:        []string{"[ylnime]"},
+			URLMatchers: []string{"ylnime.com"},
+			ProbeURL:    "https://ylnime.com",
 		},
 	})
 }
@@ -175,27 +186,28 @@ func (p *idSubProvider) FetchStreamURL(ctx context.Context, episode *models.Epis
 	return url, nil
 }
 
-// PreselectQuality runs the resolution picker for the episode's source (when
-// no --quality is set yet) as its own step, so the caller can wrap the actual
-// stream resolution in a loading screen — two screens cannot overlap. The
-// listing itself runs behind a loading screen. The choice is stored in
-// util.GlobalQuality; the returned error is the picker's (Esc → tui.ErrPickBack).
-func PreselectQuality(ctx context.Context, anime *models.Anime, episode *models.Episode, quality string) (string, error) {
-	if quality != "" && quality != "best" {
-		return quality, nil
-	}
+// PreselectQuality always runs the resolution picker for interactive playback,
+// even when --quality or a previous source set util.GlobalQuality. This keeps a
+// quality choice source-specific instead of silently reusing another source's.
+func PreselectQuality(ctx context.Context, anime *models.Anime, episode *models.Episode, _ string) (string, error) {
 	src, _ := source.Resolve(anime)
 	p, ok := src.(*idSubProvider)
-	if !ok || episode == nil {
-		return quality, nil
+	if !ok {
+		return "", fmt.Errorf("quality selection unavailable for this source")
+	}
+	if episode == nil {
+		return "", fmt.Errorf("quality selection requires an episode")
 	}
 	adapter, err := p.scraper()
 	if err != nil {
 		return "", err
 	}
 	ql, ok := adapter.(scraper.QualityLister)
-	if !ok || !term.IsTerminal(int(os.Stdin.Fd())) {
-		return quality, nil
+	if !ok {
+		return "", fmt.Errorf("quality selection unavailable for %s", p.desc.Kind)
+	}
+	if !term.IsTerminal(int(os.Stdin.Fd())) {
+		return "", fmt.Errorf("quality selection requires an interactive terminal")
 	}
 	var qualities []string
 	err = tui.RunLoading("Episodes › Quality", "Loading qualities…", func(lctx context.Context) error {
@@ -207,11 +219,9 @@ func PreselectQuality(ctx context.Context, anime *models.Anime, episode *models.
 	case tui.IsCancelled(err):
 		return "", err
 	case err != nil:
-		// Listing is best-effort: the resolver will report the real error.
-		util.Debug("Quality listing unavailable; playing the source default", "error", err)
-		return quality, nil
-	case len(qualities) < 2:
-		return quality, nil
+		return "", fmt.Errorf("list %s qualities: %w", p.desc.Kind, err)
+	case len(qualities) == 0:
+		return "", fmt.Errorf("no resolutions available from %s", p.desc.Kind)
 	}
 	return promptQuality(qualities)
 }
@@ -232,11 +242,8 @@ func promptQuality(qualities []string) (string, error) {
 	return qualities[idx], nil
 }
 
-// pickQuality asks which resolution to play when no --quality was given and
-// the source offers more than one. The choice is kept in util.GlobalQuality
-// for the rest of the session, so the next episode does not ask again. Without
-// a terminal the source's default ("best") is used. Esc/quit is reported as
-// tui.ErrPickBack for the player to route back to the episode list.
+// pickQuality is the fallback for non-playback callers that did not run
+// PreselectQuality. Explicit and headless download choices remain automatic.
 func pickQuality(ctx context.Context, adapter scraper.UnifiedScraper, episodeURL, quality string) (string, error) {
 	if quality != "" && quality != "best" {
 		return quality, nil

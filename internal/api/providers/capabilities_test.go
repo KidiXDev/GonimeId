@@ -13,7 +13,7 @@ import (
 // so none may carry browser or season methods it does not need.
 func TestModelC_NoSourceIsBrowserGatedOrSeasoned(t *testing.T) {
 	t.Parallel()
-	for _, kind := range []source.SourceKind{source.Otakudesu, source.Samehadaku, source.Nimegami} {
+	for _, kind := range []source.SourceKind{source.Otakudesu, source.Samehadaku, source.Nimegami, source.Ylnime} {
 		s, ok := source.Registered(kind)
 		require.True(t, ok, "source %s must be registered", kind)
 		assert.False(t, source.IsBrowserGated(s), "%s is pure-HTTP and must not be browser-gated", kind)

@@ -134,6 +134,8 @@ func searchAnimeEnhanced(
 		registryKinds = []apisource.SourceKind{apisource.Samehadaku}
 	case "nimegami":
 		registryKinds = []apisource.SourceKind{apisource.Nimegami}
+	case "ylnime":
+		registryKinds = []apisource.SourceKind{apisource.Ylnime}
 	}
 	util.Debug("Searching for anime/media", "query", name, "kinds", registryKinds)
 
