@@ -4,15 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
-	"sync"
 	"time"
 
 	"github.com/KidiXDev/GonimeId/internal/api"
 	"github.com/KidiXDev/GonimeId/internal/api/providers"
 
-	"charm.land/huh/v2"
-	"charm.land/huh/v2/spinner"
 	"github.com/KidiXDev/GonimeId/internal/models"
 	"github.com/KidiXDev/GonimeId/internal/tui"
 	"github.com/KidiXDev/GonimeId/internal/util"
@@ -62,41 +58,23 @@ var (
 // sync.Once makes the two paths mutually exclusive, so an action that already
 // ran inside the spinner is never repeated.
 func defaultRunSpinner(title string, action func()) {
-	var once sync.Once
-	wrapped := func() { once.Do(action) }
-
-	_ = tui.RunClean(func() error {
-		return spinner.New().
-			Title(title).
-			Type(spinner.Dots).
-			Action(wrapped).
-			Run()
+	_ = tui.RunLoading("Search › Results", title, func(context.Context) error {
+		action()
+		return nil
 	})
-
-	// No-op when the spinner already ran it; runs it now when it did not.
-	wrapped()
 }
 
 // defaultPromptForName is the production prompt. Returns the user's input
 // trimmed, or an error if cancelled / empty / TTY unavailable.
 func defaultPromptForName(_ string) (string, error) {
-	var newName string
-	prompt := huh.NewInput().
-		Title("Search anime").
-		Description("No luck — try another title").
-		Value(&newName).
-		Validate(func(v string) error {
-			if len(strings.TrimSpace(v)) < 2 {
-				return fmt.Errorf("anime name must be at least 2 characters")
-			}
-			return nil
-		})
-	if err := tui.RunClean(prompt.Run); err != nil {
-		return "", fmt.Errorf("search cancelled by user")
-	}
-	name := strings.TrimSpace(newName)
-	if name == "" {
-		return "", fmt.Errorf("search cancelled: empty name provided")
+	name, err := tui.Prompt(tui.PromptOptions{
+		Breadcrumb:  "Search",
+		Title:       "Search anime",
+		Placeholder: "Type title",
+		MinLength:   2,
+	})
+	if err != nil {
+		return "", fmt.Errorf("search cancelled by user: %w", err)
 	}
 	return name, nil
 }
@@ -151,15 +129,10 @@ func SearchAnimeWithRetry(name string) (*models.Anime, error) {
 			return anime, nil
 		}
 
-		// Check if user requested to go back to search
-		if errors.Is(searchErr, api.ErrBackToSearch) {
-			util.Infof("Going back to new search...")
-		} else {
-			// Display error message to user for other errors
+		// Anything but "back" is shown on the prompt screen's footer notice.
+		if !errors.Is(searchErr, api.ErrBackToSearch) {
 			util.Errorf("No anime found with the name: %s", currentName)
 		}
-
-		util.Infof("Please enter a new search term.")
 
 		nextName, promptErr := promptForNameFn(currentName)
 		if promptErr != nil {

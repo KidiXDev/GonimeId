@@ -69,7 +69,7 @@ func ShowBeautifulHelp() {
 	// Program title
 	helpContent.WriteString(titleStyle.Render("GonimeId - Anime Sub Indo dari Terminal"))
 	helpContent.WriteString("\n")
-	helpContent.WriteString(subtitleStyle.Render("Search, stream and download Indonesian-subtitled anime (Otakudesu, Samehadaku) with mpv."))
+	helpContent.WriteString(subtitleStyle.Render("Search, stream and download Indonesian-subtitled anime (Otakudesu, Samehadaku, Nimegami) with mpv."))
 	helpContent.WriteString("\n\n")
 
 	// Usage section
@@ -107,7 +107,7 @@ func ShowBeautifulHelp() {
 	addOption(&helpContent, "-d", "Download mode - download specific episodes for offline viewing.")
 	addOption(&helpContent, "-r", "Range download mode - download multiple episodes (use with -d).")
 	addOption(&helpContent, "-a", "Download ALL episodes (use with -d).")
-	addOption(&helpContent, "--source", "Search one source only: otakudesu or samehadaku. Default: both.")
+	addOption(&helpContent, "--source", "Search one source only: otakudesu, samehadaku or nimegami. Default: all.")
 	addOption(&helpContent, "--quality", "Video quality (1080p, 720p, 480p, 360p). Default: ask, then remember for the session.")
 	addOption(&helpContent, "-o", "Output directory for downloads (default: ~/.local/gonimeid/downloads/anime/). Files use Plex naming: Anime - S01E01.mp4.")
 	helpContent.WriteString("\n")
@@ -134,7 +134,7 @@ func ShowBeautifulHelp() {
 	helpContent.WriteString(sectionTitleStyle.Render("Features:"))
 	helpContent.WriteString("\n")
 
-	addFeature(&helpContent, "Indonesian Sources", "Otakudesu and Samehadaku, searched together; dead mirrors are skipped automatically.")
+	addFeature(&helpContent, "Indonesian Sources", "Otakudesu, Samehadaku and Nimegami, searched together; dead mirrors are skipped automatically.")
 	addFeature(&helpContent, "Smart Search", "Intelligent search with fuzzy matching and suggestions.")
 	addFeature(&helpContent, "Quality Selection", "Pick 1080p/720p/480p/360p per session; higher-quality download files are preferred over streaming mirrors.")
 	addFeature(&helpContent, "Batch Downloads", "Download single episodes, ranges, or entire seasons for offline viewing.")

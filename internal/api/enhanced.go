@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 
-	"charm.land/huh/v2/spinner"
 	apisource "github.com/KidiXDev/GonimeId/internal/api/source"
 	"github.com/KidiXDev/GonimeId/internal/models"
 	"github.com/KidiXDev/GonimeId/internal/tui"
@@ -45,47 +44,14 @@ func isStdoutTerminal() bool {
 // guarantee the action runs exactly once and that this function does not
 // return until that single execution has finished.
 func runWithSpinner(title string, action func()) {
-	if !isStdoutTerminal() {
-		action()
-		return
-	}
-	// Background probes (e.g. per-source search diagnostics) log through
-	// util.Warn/Info while the spinner is animating. Those writes land on
-	// the same stderr the spinner redraws, interleaving with its frames and
-	// leaving garbled output behind once the spinner exits. Route console
-	// logs to the file only for the spinner's lifetime, same as the
-	// download progress bars do (internal/player/download.go).
+	// Console logs are silenced for the loading screen's lifetime: background
+	// probes log through util.Warn/Info and would land between frames.
 	restoreConsoleLogs := util.SuppressConsoleLogging()
 	defer restoreConsoleLogs()
-	awaitActionThroughRunner(action, func(wrapped func()) {
-		_ = tui.RunClean(func() error {
-			return spinner.New().
-				Title(title).
-				Type(spinner.Dots).
-				Action(wrapped).
-				Run()
-		})
+	_ = tui.RunLoading("Search", title, func(context.Context) error {
+		action()
+		return nil
 	})
-}
-
-// awaitActionThroughRunner runs `action` via `runner` and guarantees that:
-//   - action executes exactly once (sync.Once); and
-//   - this function does not return until that single execution has fully
-//     returned, even if `runner` exits before invoking the wrapped function
-//     it was given.
-//
-// Exposed at package scope so the regression test can drive it directly with
-// a mock runner that mimics the spinner's "Run() exits before Action finishes"
-// race, without depending on a real terminal.
-func awaitActionThroughRunner(action func(), runner func(wrapped func())) {
-	var once sync.Once
-	wrapped := func() { once.Do(action) }
-	runner(wrapped)
-	// If the runner already invoked wrapped and action is still in flight,
-	// once.Do here blocks until that in-flight call returns. If the runner
-	// never invoked wrapped, this call runs action now. Either way, action
-	// is guaranteed to have fully completed when we return.
-	wrapped()
 }
 
 // ErrBackToSearch is returned when user selects the back option to search again
@@ -166,6 +132,8 @@ func searchAnimeEnhanced(
 		registryKinds = []apisource.SourceKind{apisource.Otakudesu}
 	case "samehadaku":
 		registryKinds = []apisource.SourceKind{apisource.Samehadaku}
+	case "nimegami":
+		registryKinds = []apisource.SourceKind{apisource.Nimegami}
 	}
 	util.Debug("Searching for anime/media", "query", name, "kinds", registryKinds)
 

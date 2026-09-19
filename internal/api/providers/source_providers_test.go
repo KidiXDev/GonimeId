@@ -45,6 +45,7 @@ func TestIDSubProviders_DescribeAndScraper(t *testing.T) {
 	}{
 		{source.Otakudesu, scraper.OtakudesuType, 10, "otakudesu"},
 		{source.Samehadaku, scraper.SamehadakuType, 20, "samehadaku"},
+		{source.Nimegami, scraper.NimegamiType, 30, "nimegami"},
 	}
 	for _, tt := range tests {
 		t.Run(string(tt.kind), func(t *testing.T) {
@@ -75,7 +76,7 @@ func TestIDSubProviders_DescribeAndScraper(t *testing.T) {
 // Model B registry with every live source.
 func TestSourceRegistry_LiveSourcesRegistered(t *testing.T) {
 	t.Parallel()
-	for _, kind := range []source.SourceKind{source.Otakudesu, source.Samehadaku} {
+	for _, kind := range []source.SourceKind{source.Otakudesu, source.Samehadaku, source.Nimegami} {
 		s, ok := source.Registered(kind)
 		require.True(t, ok, "source %s must be registered", kind)
 		assert.Equal(t, kind, s.Describe().Kind)
@@ -101,6 +102,7 @@ func TestResolve_LiveRegistry(t *testing.T) {
 		{"explicit Otakudesu", &models.Anime{Source: "Otakudesu"}, source.Otakudesu},
 		{"otakudesu URL", &models.Anime{URL: "https://otakudesu.blog/anime/naruto-sub-indo/"}, source.Otakudesu},
 		{"samehadaku URL", &models.Anime{URL: "https://v2.samehadaku.how/anime/naruto-kecil/"}, source.Samehadaku},
+		{"nimegami episode URL", &models.Anime{URL: "https://nimegami.id/sousou-no-frieren-sub-indo/#play_eps_1"}, source.Nimegami},
 		{"unknown", &models.Anime{Name: "X", URL: "https://example.com/v"}, source.Unknown},
 	}
 	for _, tt := range tests {
@@ -127,6 +129,7 @@ func TestResolveURL_LiveRegistry(t *testing.T) {
 		{"", source.Unknown},
 		{"https://otakudesu.blog/episode/naruto-episode-1-sub-indo/", source.Otakudesu},
 		{"https://v2.samehadaku.how/naruto-episode-1/", source.Samehadaku},
+		{"https://nimegami.id/sousou-no-frieren-sub-indo/#play_eps_1", source.Nimegami},
 		// Removed hosts resolve to nothing rather than to a guess.
 		{"https://animefire.plus/ep/naruto-1", source.Unknown},
 		{"https://example.com/video", source.Unknown},

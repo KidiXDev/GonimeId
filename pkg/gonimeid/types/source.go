@@ -15,6 +15,8 @@ const (
 	SourceOtakudesu Source = iota
 	// SourceSamehadaku is samehadaku (Indonesian-subtitled).
 	SourceSamehadaku
+	// SourceNimegami is nimegami.id (Indonesian-subtitled).
+	SourceNimegami
 )
 
 // String returns the canonical spelling the registry stamps onto
@@ -25,6 +27,8 @@ func (s Source) String() string {
 		return "Otakudesu"
 	case SourceSamehadaku:
 		return "Samehadaku"
+	case SourceNimegami:
+		return "Nimegami"
 	default:
 		return "Unknown"
 	}
@@ -35,6 +39,8 @@ func (s Source) ToScraperType() scraper.ScraperType {
 	switch s {
 	case SourceSamehadaku:
 		return scraper.SamehadakuType
+	case SourceNimegami:
+		return scraper.NimegamiType
 	default:
 		return scraper.OtakudesuType
 	}
@@ -47,6 +53,8 @@ func ParseSource(s string) (Source, error) {
 		return SourceOtakudesu, nil
 	case "samehadaku":
 		return SourceSamehadaku, nil
+	case "nimegami":
+		return SourceNimegami, nil
 	default:
 		return SourceOtakudesu, fmt.Errorf("unknown source: %s", s)
 	}

@@ -12,6 +12,7 @@ import (
 	"fmt"
 
 	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/scraper/providers/nimegami"
 	"github.com/KidiXDev/GonimeId/internal/scraper/providers/otakudesu"
 	"github.com/KidiXDev/GonimeId/internal/scraper/providers/samehadaku"
 )
@@ -22,6 +23,7 @@ type ScraperType int
 const (
 	OtakudesuType  ScraperType = iota // otakudesu — Indonesian-subtitled
 	SamehadakuType                    // samehadaku — Indonesian-subtitled
+	NimegamiType                      // nimegami.id — Indonesian-subtitled
 )
 
 // ContextualScraper is the optional capability (Model C: discovered by type
@@ -57,6 +59,8 @@ func NewAdapter(t ScraperType) (UnifiedScraper, error) {
 		return &ctxAdapter{client: otakudesu.NewOtakudesuClient(), typ: OtakudesuType}, nil
 	case SamehadakuType:
 		return &ctxAdapter{client: samehadaku.NewSamehadakuClient(), typ: SamehadakuType}, nil
+	case NimegamiType:
+		return &ctxAdapter{client: nimegami.NewNimegamiClient(), typ: NimegamiType}, nil
 	default:
 		return nil, fmt.Errorf("no adapter for scraper type %v", t)
 	}
@@ -70,6 +74,8 @@ func scraperDisplayName(scraperType ScraperType) string {
 		return "Otakudesu"
 	case SamehadakuType:
 		return "Samehadaku"
+	case NimegamiType:
+		return "Nimegami"
 	default:
 		return "Unknown"
 	}

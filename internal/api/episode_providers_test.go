@@ -346,8 +346,8 @@ func TestKitsuProvider_JSONApi(t *testing.T) {
 			expected string
 		}{
 			{"Naruto (Dublado)", "Naruto"},
-			{"Attack on Titan - AllAnime", "Attack on Titan"},
-			{"Bleach [AnimeFire]", "Bleach"},
+			{"Attack on Titan - Nimegami", "Attack on Titan"},
+			{"Bleach [Otakudesu]", "Bleach"},
 		}
 
 		for _, tc := range testCases {
@@ -863,13 +863,13 @@ func TestCleanTitle(t *testing.T) {
 			expected: "Bleach",
 		},
 		{
-			name:     "AllAnime source tag",
-			input:    "Naruto - AllAnime",
+			name:     "Nimegami source suffix",
+			input:    "Naruto - Nimegami",
 			expected: "Naruto",
 		},
 		{
-			name:     "AnimeFire source tag",
-			input:    "One Piece [AnimeFire]",
+			name:     "Otakudesu source tag",
+			input:    "One Piece [Otakudesu]",
 			expected: "One Piece",
 		},
 		{
@@ -884,7 +884,7 @@ func TestCleanTitle(t *testing.T) {
 		},
 		{
 			name:     "Multiple suffixes",
-			input:    "My Hero Academia (Dublado) - AnimeFire",
+			input:    "My Hero Academia (Dublado) - Samehadaku",
 			expected: "My Hero Academia",
 		},
 		{
@@ -894,7 +894,7 @@ func TestCleanTitle(t *testing.T) {
 		},
 		{
 			name:     "Season indicator is removed for better AniList matching",
-			input:    "Jujutsu Kaisen Season 2 [AllAnime]",
+			input:    "Jujutsu Kaisen Season 2 [Nimegami]",
 			expected: "Jujutsu Kaisen",
 		},
 	}

@@ -163,10 +163,23 @@ func (m *animeResultsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyPressMsg:
 		filtering := m.results.FilterState() == list.Filtering
+		if m.shell.Logs {
+			switch msg.String() {
+			case LogsToggleKey, "esc", "q", "enter":
+				m.shell.Logs = false
+			case "ctrl+c":
+				m.err = ErrSelectionCancelled
+				return m, tea.Quit
+			}
+			return m, nil
+		}
 		switch msg.String() {
 		case "ctrl+c":
 			m.err = ErrSelectionCancelled
 			return m, tea.Quit
+		case LogsToggleKey:
+			m.shell.ToggleLogs()
+			return m, nil
 		case "q":
 			if !filtering {
 				m.err = ErrSelectionCancelled
@@ -216,9 +229,11 @@ func SelectAnime(animes []*models.Anime) (*models.Anime, error) {
 	return selectAnimeWithRunner(animes, func(model tea.Model) (tea.Model, error) {
 		var final tea.Model
 		err := RunClean(func() error {
-			var runErr error
-			final, runErr = NewProgram(model).Run()
-			return runErr
+			return busy(func() error {
+				var runErr error
+				final, runErr = NewProgram(model).Run()
+				return runErr
+			})
 		})
 		return final, err
 	})

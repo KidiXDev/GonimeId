@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"os"
 	"strings"
 
 	"github.com/KidiXDev/GonimeId/internal/api"
@@ -13,8 +14,10 @@ import (
 	"github.com/KidiXDev/GonimeId/internal/playback"
 	"github.com/KidiXDev/GonimeId/internal/player"
 	"github.com/KidiXDev/GonimeId/internal/tracking"
+	"github.com/KidiXDev/GonimeId/internal/tui"
 	"github.com/KidiXDev/GonimeId/internal/util"
 	"github.com/KidiXDev/GonimeId/internal/version"
+	"github.com/charmbracelet/x/term"
 )
 
 // HandlePlaybackMode processes normal anime playback
@@ -29,6 +32,18 @@ func HandlePlaybackMode(animeName string) {
 
 	// Initialize the beautiful logger
 	util.InitLogger()
+
+	// Interactive session: nothing prints to the console between screens.
+	// Every line still reaches the log file and the in-app log overlay
+	// (ctrl+l), and the newest WARN/ERROR shows in each screen's footer.
+	// Restored on return so a final error is printed after the TUI closes.
+	if term.IsTerminal(os.Stdin.Fd()) {
+		restore := util.SuppressConsoleLogging()
+		defer func() {
+			restore()
+			util.EchoLastError()
+		}()
+	}
 
 	// Confirm the manual kill-switch (S1) visibly: if the user disabled any
 	// source via GONIMEID_DISABLED_SOURCES, say so once at startup so a turned-
@@ -62,7 +77,9 @@ func HandlePlaybackMode(animeName string) {
 		searchTimer.Stop()
 
 		if err != nil {
-			util.Errorf("Failed to search for anime: %v", err)
+			if !tui.IsCancelled(err) { // Esc at the prompt is a quiet quit
+				util.Errorf("Failed to search for anime: %v", err)
+			}
 			return
 		}
 

@@ -60,6 +60,8 @@ func scraperKind(st scraper.ScraperType) (apisource.SourceKind, bool) {
 		return apisource.Otakudesu, true
 	case scraper.SamehadakuType:
 		return apisource.Samehadaku, true
+	case scraper.NimegamiType:
+		return apisource.Nimegami, true
 	default:
 		return "", false
 	}
@@ -178,5 +180,6 @@ func (c *Client) GetAvailableSources() []types.Source {
 	return []types.Source{
 		types.SourceOtakudesu,
 		types.SourceSamehadaku,
+		types.SourceNimegami,
 	}
 }

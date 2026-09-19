@@ -53,6 +53,7 @@ func TestSearchAnimeEnhancedCore_ResultScreenCascade(t *testing.T) {
 		}{
 			{src: "otakudesu", want: []source.SourceKind{source.Otakudesu}},
 			{src: " Samehadaku ", want: []source.SourceKind{source.Samehadaku}},
+			{src: "nimegami", want: []source.SourceKind{source.Nimegami}},
 			{src: "unknown", want: nil},
 			{src: "", want: nil},
 		}

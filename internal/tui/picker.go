@@ -163,10 +163,24 @@ func (m *pickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyPressMsg:
 		filtering := m.entries.FilterState() == list.Filtering
+		if m.shell.Logs {
+			// The overlay swallows keys: only closing it is meaningful.
+			switch msg.String() {
+			case LogsToggleKey, "esc", "q", "enter":
+				m.shell.Logs = false
+			case "ctrl+c":
+				m.err = ErrPickCancelled
+				return m, tea.Quit
+			}
+			return m, nil
+		}
 		switch msg.String() {
 		case "ctrl+c":
 			m.err = ErrPickCancelled
 			return m, tea.Quit
+		case LogsToggleKey:
+			m.shell.ToggleLogs()
+			return m, nil
 		case "esc":
 			if m.entries.FilterState() == list.Unfiltered {
 				m.err = ErrPickBack
@@ -322,9 +336,11 @@ func Pick(items []PickItem, opts PickOptions) (int, error) {
 	return pickWithRunner(items, opts, func(model tea.Model) (tea.Model, error) {
 		var final tea.Model
 		err := RunClean(func() error {
-			var runErr error
-			final, runErr = NewProgram(model).Run()
-			return runErr
+			return busy(func() error {
+				var runErr error
+				final, runErr = NewProgram(model).Run()
+				return runErr
+			})
 		})
 		return final, err
 	})

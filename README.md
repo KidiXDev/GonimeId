@@ -20,13 +20,14 @@ Portuguese, English and movie/TV sources were removed.
 |---|---|---|
 | [Otakudesu](https://otakudesu.blog) | 360p – 1080p | Download-section files (Pixeldrain) are preferred; streaming mirrors are the fallback |
 | [Samehadaku](https://v2.samehadaku.how) | 360p – 1080p | Pixeldrain servers, Blogspot fallback |
+| [Nimegami](https://nimegami.id) | 360p – 1080p | Direct berkasdrive files; one page per season |
 
-Both are searched together by default. Dead or geo-locked files are probed and
+All three are searched together by default. Dead or geo-locked files are probed and
 skipped before anything reaches mpv.
 
 ## Features
 
-* Search across both sources, one picker
+* Search across all sources, one picker
 * Resolution picker (remembered for the session) or `--quality 1080p`
 * Play in mpv with skip-intro/outro (AniSkip) and resume tracking (SQLite build)
 * Download single episodes, ranges, or everything — Plex/Jellyfin folder naming
@@ -70,7 +71,7 @@ With watch-progress tracking (needs SQLite headers): `cd build && ./buildlinux-w
 ```bash
 gonimeid                       # interactive: search → title → episode → quality → play
 gonimeid "one piece"           # search directly (use spaces, not hyphens)
-gonimeid --source samehadaku "naruto"
+gonimeid --source nimegami "frieren"    # otakudesu | samehadaku | nimegami
 gonimeid --quality 1080p "frieren"
 
 gonimeid -d "one piece" 1      # download episode 1

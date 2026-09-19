@@ -219,10 +219,21 @@ func buildPlaybackArgs(in playbackArgsInput) []string {
 	return mpvArgs
 }
 
-// waitForVideoReady waits for the HLS video to be ready for playback
-// Returns true if video is ready, false if timeout or mpv already exited.
+// mpvSocketAlive reports whether the player still answers on its IPC socket.
+func mpvSocketAlive(socketPath string) bool {
+	conn, err := dialMPVSocket(socketPath)
+	if err != nil {
+		return false
+	}
+	_ = conn.Close()
+	return true
+}
+
+// waitForVideoReady waits until mpv reports a duration or a playback
+// position. Returns true if video is ready, false on timeout or when mpv
+// already exited.
 func waitForVideoReady(socketPath string) bool {
-	util.Debugf("Waiting for HLS video to be ready...")
+	util.Debugf("Waiting for the video to be ready...")
 
 	maxWait := 45 * time.Second // Generous for slow HLS streams
 	pollInterval := 50 * time.Millisecond
@@ -632,25 +643,42 @@ func playVideo(
 	// Fetch AniSkip data asynchronously (AniSkip API is keyed on MAL ID)
 	skipDataChan := fetchAniSkipAsync(malID, currentEpisodeNum, currentEpisode)
 
-	// Start the video with mpv
-	mpvTimer := util.StartTimer("MPV:StartVideo")
-	socketPath, err := StartVideo(videoURL, mpvArgs)
-	mpvTimer.Stop()
-	if err != nil {
-		return fmt.Errorf("failed to start video: %w", err)
+	// Start mpv and wait until it is actually playing, behind a loading
+	// screen: the window takes a few seconds to appear and, before this, the
+	// menu showed up over a player that was still opening (or had died).
+	var socketPath string
+	startErr := tui.RunLoading("Playing › "+tui.SingleLine(title), "Starting player…", func(context.Context) error {
+		mpvTimer := util.StartTimer("MPV:StartVideo")
+		var err error
+		socketPath, err = StartVideo(videoURL, mpvArgs)
+		mpvTimer.Stop()
+		if err != nil {
+			return fmt.Errorf("failed to start video: %w", err)
+		}
+		if isHLSStream && resumeTime > 0 {
+			// Includes waiting for the video to be ready.
+			util.Debugf("HLS stream detected with resume time %d seconds", resumeTime)
+			hlsTimer := util.StartTimer("HLS:SeekToResume")
+			seekToResumePosition(socketPath, resumeTime)
+			hlsTimer.Stop()
+			return nil
+		}
+		readyTimer := util.StartTimer("MPV:WaitForReady")
+		ready := waitForVideoReady(socketPath)
+		readyTimer.Stop()
+		if !ready && !mpvSocketAlive(socketPath) {
+			return errors.New("the player could not open this stream (it exited before playback started)")
+		}
+		return nil
+	})
+	if tui.IsCancelled(startErr) {
+		if socketPath != "" {
+			_, _ = mpvSendCommand(socketPath, []any{"quit"})
+		}
+		return ErrBackToDownloadOptions
 	}
-
-	// For HLS streams, seek to resume position (includes waiting for video ready)
-	if isHLSStream && resumeTime > 0 {
-		util.Debugf("HLS stream detected with resume time %d seconds", resumeTime)
-		hlsTimer := util.StartTimer("HLS:SeekToResume")
-		seekToResumePosition(socketPath, resumeTime)
-		hlsTimer.Stop()
-	} else if isHLSStream {
-		// Just wait for video ready without seeking
-		hlsTimer := util.StartTimer("HLS:WaitForReady")
-		waitForVideoReady(socketPath)
-		hlsTimer.Stop()
+	if startErr != nil {
+		return startErr
 	}
 
 	// Apply AniSkip results to skip intros/outros

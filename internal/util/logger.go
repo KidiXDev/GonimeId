@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -187,6 +188,36 @@ func InitLogger() {
 	}
 }
 
+// EchoLastError prints the newest ERROR recorded in the last few seconds to
+// the console. The interactive session silences console output while screens
+// are up, so an error logged right before the app exits would otherwise only
+// exist in the log file; the caller invokes this after restoring the console.
+func EchoLastError() {
+	if Logger == nil {
+		return
+	}
+	if e, ok := tui.LastNotice(5 * time.Second); ok && e.Level == tui.LogError {
+		Logger.Error(e.Message)
+	}
+}
+
+// withKeyvals renders structured key/value pairs the way the console line
+// would, so the in-app log overlay shows the same text.
+func withKeyvals(msg string, keyvals []any) string {
+	if len(keyvals) == 0 {
+		return msg
+	}
+	var b strings.Builder
+	b.WriteString(msg)
+	for i := 0; i+1 < len(keyvals); i += 2 {
+		fmt.Fprintf(&b, " %v=%v", keyvals[i], keyvals[i+1])
+	}
+	if len(keyvals)%2 == 1 {
+		fmt.Fprintf(&b, " %v", keyvals[len(keyvals)-1])
+	}
+	return b.String()
+}
+
 // SuppressConsoleLogging temporarily silences the console logger while keeping
 // file logging available through the util logging helpers. This prevents async
 // logs from corrupting interactive progress bars.
@@ -302,6 +333,7 @@ func GetLogFileWriter() io.Writer {
 func Debug(msg any, keyvals ...any) {
 	if IsDebug {
 		formatted := fmt.Sprintf("%v", msg)
+		tui.AppendLog(tui.LogDebug, withKeyvals(formatted, keyvals))
 		if fileLogger != nil {
 			writeToFile(log.DebugLevel, formatted, keyvals...)
 		} else if Logger != nil {
@@ -315,6 +347,7 @@ func Debug(msg any, keyvals ...any) {
 func Info(msg any, keyvals ...any) {
 	if Logger != nil {
 		formatted := fmt.Sprintf("%v", msg)
+		tui.AppendLog(tui.LogInfo, withKeyvals(formatted, keyvals))
 		Logger.Info(formatted, keyvals...)
 		writeToFile(log.InfoLevel, formatted, keyvals...)
 	}
@@ -324,6 +357,7 @@ func Info(msg any, keyvals ...any) {
 func Warn(msg any, keyvals ...any) {
 	if Logger != nil {
 		formatted := fmt.Sprintf("%v", msg)
+		tui.AppendLog(tui.LogWarn, withKeyvals(formatted, keyvals))
 		Logger.Warn(formatted, keyvals...)
 		writeToFile(log.WarnLevel, formatted, keyvals...)
 	}
@@ -333,6 +367,7 @@ func Warn(msg any, keyvals ...any) {
 func Error(msg any, keyvals ...any) {
 	if Logger != nil {
 		formatted := fmt.Sprintf("%v", msg)
+		tui.AppendLog(tui.LogError, withKeyvals(formatted, keyvals))
 		Logger.Error(formatted, keyvals...)
 		writeToFile(log.ErrorLevel, formatted, keyvals...)
 	}
@@ -353,6 +388,7 @@ func Fatal(msg any, keyvals ...any) {
 func Debugf(format string, args ...any) {
 	if IsDebug {
 		formatted := fmt.Sprintf(format, args...)
+		tui.AppendLog(tui.LogDebug, formatted)
 		if fileLogger != nil {
 			writeToFile(log.DebugLevel, formatted)
 		} else if Logger != nil {
@@ -366,6 +402,7 @@ func Debugf(format string, args ...any) {
 func Infof(format string, args ...any) {
 	if Logger != nil {
 		formatted := fmt.Sprintf(format, args...)
+		tui.AppendLog(tui.LogInfo, formatted)
 		Logger.Info(formatted)
 		writeToFile(log.InfoLevel, formatted)
 	}
@@ -375,6 +412,7 @@ func Infof(format string, args ...any) {
 func Warnf(format string, args ...any) {
 	if Logger != nil {
 		formatted := fmt.Sprintf(format, args...)
+		tui.AppendLog(tui.LogWarn, formatted)
 		Logger.Warn(formatted)
 		writeToFile(log.WarnLevel, formatted)
 	}
@@ -384,6 +422,7 @@ func Warnf(format string, args ...any) {
 func Errorf(format string, args ...any) {
 	if Logger != nil {
 		formatted := fmt.Sprintf(format, args...)
+		tui.AppendLog(tui.LogError, formatted)
 		Logger.Error(formatted)
 		writeToFile(log.ErrorLevel, formatted)
 	}

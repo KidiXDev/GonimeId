@@ -17,6 +17,8 @@ type Theme struct {
 	SelectedTitle       lipgloss.Style
 	SelectedDescription lipgloss.Style
 	FilterMatch         lipgloss.Style
+	Warn                lipgloss.Style
+	Error               lipgloss.Style
 }
 
 // NewTheme builds a deterministic light or dark GonimeId theme.
@@ -27,6 +29,8 @@ func NewTheme(isDark bool) Theme {
 	muted := lightDark(lipgloss.Color("#6B7280"), lipgloss.Color("#9CA3AF"))
 	border := lightDark(lipgloss.Color("#D1D5DB"), lipgloss.Color("#374151"))
 	surface := lightDark(lipgloss.Color("#F3F4F6"), lipgloss.Color("#1F2937"))
+	warn := lightDark(lipgloss.Color("#B45309"), lipgloss.Color("#FBBF24"))
+	danger := lightDark(lipgloss.Color("#B91C1C"), lipgloss.Color("#F87171"))
 
 	return Theme{
 		Primary:    lipgloss.NewStyle().Foreground(primary).Bold(true),
@@ -46,5 +50,7 @@ func NewTheme(isDark bool) Theme {
 		SelectedTitle:       lipgloss.NewStyle().Foreground(primary).Bold(true).Border(lipgloss.NormalBorder(), false, false, false, true).BorderForeground(primary).PaddingLeft(1),
 		SelectedDescription: lipgloss.NewStyle().Foreground(primary).Border(lipgloss.NormalBorder(), false, false, false, true).BorderForeground(primary).PaddingLeft(1),
 		FilterMatch:         lipgloss.NewStyle().Foreground(primary).Underline(true),
+		Warn:                lipgloss.NewStyle().Foreground(warn).Bold(true),
+		Error:               lipgloss.NewStyle().Foreground(danger).Bold(true),
 	}
 }

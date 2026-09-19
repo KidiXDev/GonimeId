@@ -14,6 +14,7 @@ import (
 	"charm.land/huh/v2"
 	"github.com/KidiXDev/GonimeId/internal/tui"
 	"github.com/KidiXDev/GonimeId/internal/version"
+	"github.com/charmbracelet/x/term"
 	"github.com/ktr0731/go-fuzzyfinder"
 )
 
@@ -476,7 +477,7 @@ func FlagParser() (string, error) {
 	downloadFlag := fs.Bool("d", false, "download mode")
 	rangeFlag := fs.Bool("r", false, "download episode range (use with -d)")
 	allFlag := fs.Bool("a", false, "download ALL episodes (use with -d)")
-	sourceFlag := fs.String("source", "", "specify source (otakudesu, samehadaku); default: search both")
+	sourceFlag := fs.String("source", "", "specify source (otakudesu, samehadaku, nimegami); default: search all")
 	qualityFlag := fs.String("quality", "best", "specify video quality (best, worst, 720p, 1080p, etc.)")
 	outputDirFlag := fs.String("o", "", "output directory for downloads (default: ~/.local/gonimeid/downloads/anime/)")
 
@@ -577,35 +578,20 @@ func FlagParser() (string, error) {
 	return TreatingAnimeName(animeName), err
 }
 
-// getUserInput prompts the user for input the anime name and returns it
+// getUserInput asks for the anime name on a full shell screen (alt screen, so
+// nothing is left in the scrollback) and returns it.
 func getUserInput(label string) (string, error) {
-	var animeName string
-
-	form := huh.NewForm(
-		huh.NewGroup(
-			huh.NewInput().
-				Title(label).
-				Description("Otakudesu + Samehadaku · type a title and press Enter").
-				Value(&animeName).
-				Validate(func(v string) error {
-					if len(strings.TrimSpace(v)) < minNameLength {
-						return fmt.Errorf("name must have at least %d characters", minNameLength)
-					}
-					return nil
-				}),
-		),
-	)
-
-	if err := tui.RunClean(form.Run); err != nil {
-		return "", err
-	}
-	// Without a terminal huh's Run returns nil immediately, WITHOUT displaying
-	// the form or running the Validate above, so animeName stays empty and the
-	// caller would search for "". The form cannot legitimately complete with an
-	// empty value (Validate enforces a minimum length), so an empty result here
-	// always means "the user was never asked".
-	if strings.TrimSpace(animeName) == "" {
+	if !term.IsTerminal(os.Stdin.Fd()) {
 		return "", errors.New("no anime name entered (no interactive terminal available?)")
+	}
+	animeName, err := tui.Prompt(tui.PromptOptions{
+		Breadcrumb:  "Search",
+		Title:       label,
+		Placeholder: "Type title",
+		MinLength:   minNameLength,
+	})
+	if err != nil {
+		return "", err
 	}
 	return animeName, nil
 }

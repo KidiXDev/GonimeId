@@ -28,7 +28,7 @@ func TestGetAvailableSources(t *testing.T) {
 	for _, source := range sources {
 		seen[source] = true
 	}
-	for _, want := range []types.Source{types.SourceOtakudesu, types.SourceSamehadaku} {
+	for _, want := range []types.Source{types.SourceOtakudesu, types.SourceSamehadaku, types.SourceNimegami} {
 		if !seen[want] {
 			t.Errorf("%s source not found", want)
 		}
@@ -42,6 +42,7 @@ func TestSourceString(t *testing.T) {
 	}{
 		{types.SourceOtakudesu, "Otakudesu"},
 		{types.SourceSamehadaku, "Samehadaku"},
+		{types.SourceNimegami, "Nimegami"},
 	}
 
 	for _, tt := range tests {

@@ -11,6 +11,7 @@ type SourceKind string
 const (
 	Otakudesu  SourceKind = "Otakudesu"
 	Samehadaku SourceKind = "Samehadaku"
+	Nimegami   SourceKind = "Nimegami"
 
 	// Unknown is returned when no definition matches. It is surfaced with a
 	// warning rather than guessed at.
@@ -27,4 +28,5 @@ func ScraperTypeFor(kind SourceKind) (scraper.ScraperType, bool) {
 var scraperTypeMap = map[SourceKind]scraper.ScraperType{
 	Otakudesu:  scraper.OtakudesuType,
 	Samehadaku: scraper.SamehadakuType,
+	Nimegami:   scraper.NimegamiType,
 }

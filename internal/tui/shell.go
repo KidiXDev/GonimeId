@@ -2,6 +2,7 @@ package tui
 
 import (
 	"strings"
+	"time"
 
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
@@ -19,7 +20,18 @@ type Shell struct {
 	Breadcrumb string
 	Width      int
 	Height     int
+	// Logs shows the session log overlay in place of the body (ctrl+l).
+	Logs bool
 }
+
+// noticeWindow is how long a WARN/ERROR stays in the footer after it happened.
+const noticeWindow = 20 * time.Second
+
+// LogsToggleKey is the key every screen binds to the session log overlay.
+const LogsToggleKey = "ctrl+l"
+
+// ToggleLogs flips the log overlay; screens call it on LogsToggleKey.
+func (s *Shell) ToggleLogs() { s.Logs = !s.Logs }
 
 // NewShell creates a shell with safe dimensions before the first resize event.
 func NewShell(theme *Theme, breadcrumb string) Shell {
@@ -50,12 +62,29 @@ func (s *Shell) ContentSize() (width, height int) {
 	return width, max(height-shellChromeHeight, 1)
 }
 
-// Render wraps body content in responsive navigation chrome.
+// Render wraps body content in responsive navigation chrome. With the log
+// overlay open the body is replaced by the session log and the footer by the
+// overlay's own legend; otherwise the newest recent WARN/ERROR is shown at the
+// right of the footer so a silenced console message is never lost.
 func (s *Shell) Render(body, footer string) string {
 	width, height := s.ContentSize()
+	crumb := s.Breadcrumb
+	if s.Logs {
+		crumb = "Logs"
+		body = joinLines(formatLogLines(&s.Theme, RecentLogs(), width, height))
+		footer = "ctrl+l / esc close · newest at the bottom"
+	} else if notice, ok := LastNotice(noticeWindow); ok && width >= 50 {
+		footer = withNotice(&s.Theme, footer, notice, width)
+	}
 	header := s.Theme.Header.Render("GONIMEID")
-	if width >= 34 && s.Breadcrumb != "" {
-		header += "  " + s.Theme.Breadcrumb.Render(s.Breadcrumb)
+	if width >= 34 && crumb != "" {
+		header += "  " + s.Theme.Breadcrumb.Render(crumb)
+	}
+	if width >= 60 && !s.Logs {
+		hint := s.Theme.Muted.Render("ctrl+l logs")
+		if pad := width - ansi.StringWidth(header) - ansi.StringWidth(hint); pad > 1 {
+			header += strings.Repeat(" ", pad) + hint
+		}
 	}
 
 	if width < 50 {
@@ -80,6 +109,22 @@ func (s *Shell) Render(body, footer string) string {
 		separator,
 		fitBlock(s.Theme.Footer.Render(footer), width, 1),
 	)
+}
+
+// withNotice appends a WARN/ERROR line to the right of the footer legend,
+// truncated so the legend keeps its space.
+func withNotice(theme *Theme, footer string, notice LogEntry, width int) string {
+	style := theme.Warn
+	if notice.Level == LogError {
+		style = theme.Error
+	}
+	room := width - ansi.StringWidth(footer) - 3
+	if room < 12 {
+		return footer
+	}
+	text := ansi.Truncate(notice.Message, room, "…")
+	pad := width - ansi.StringWidth(footer) - ansi.StringWidth(text)
+	return footer + strings.Repeat(" ", max(pad, 1)) + style.Render(text)
 }
 
 // fitBlock clips ANSI-styled content to terminal cell dimensions.

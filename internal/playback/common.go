@@ -11,9 +11,11 @@ import (
 	"time"
 
 	"github.com/KidiXDev/GonimeId/internal/api"
+	"github.com/KidiXDev/GonimeId/internal/api/providers"
 	"github.com/KidiXDev/GonimeId/internal/api/providers/metadata"
 	"github.com/KidiXDev/GonimeId/internal/models"
 	"github.com/KidiXDev/GonimeId/internal/player"
+	"github.com/KidiXDev/GonimeId/internal/tui"
 	"github.com/KidiXDev/GonimeId/internal/util"
 )
 
@@ -68,18 +70,15 @@ func PlayEpisode(
 		}
 	}
 
-	// Fetch episode metadata and stream URL in parallel.
-	//
-	// 2026-04-28: removed the huh/v2 Bubble Tea spinner that previously
-	// wrapped this block. GetVideoURLForEpisodeEnhanced may invoke a
-	// tcell-based fuzzyfinder quality picker (AnimeFire's multi-quality
-	// response). The Bubble Tea spinner and tcell racing for stdin/stdout
-	// caused two user-visible bugs: arrow keys needed multiple presses to
-	// register (input contention) and the spinner's redraw clipped the
-	// first character of the picker's prompt ("S" of "Select"). A static
-	// log line is the smaller evil — animation is a nice-to-have, the
-	// picker working is not.
-	util.Infof("Loading episode...")
+	// The resolution picker is a screen of its own, so it runs first; the
+	// stream is then resolved behind a loading screen (two screens cannot
+	// share the terminal). Esc on either goes back to the episode list.
+	if _, err := providers.PreselectQuality(ctx, anime, currentEpisode, util.GlobalQuality); err != nil {
+		if !tui.IsCancelled(err) {
+			util.Warnf("Could not prepare playback: %v", err)
+		}
+		return player.ErrBackToEpisodeSelection
+	}
 
 	var videoURL string
 	var videoErr error
@@ -88,25 +87,29 @@ func PlayEpisode(
 	episodeDataAnime := *anime
 	episodeDataAnime.Episodes = append([]models.Episode(nil), anime.Episodes...)
 
-	var wg sync.WaitGroup
-	wg.Add(2)
-
-	go func() {
-		defer wg.Done()
-		// Metadata providers mutate Episodes. Keep that mutation isolated from
-		// stream resolution, which concurrently reads and may enrich anime.
-		episodeDataErr = api.GetEpisodeData(anime.MalID, episodeNum, &episodeDataAnime)
-		if episodeDataErr != nil {
-			util.Debugf("Error fetching episode data: %v", episodeDataErr)
-		}
-	}()
-
-	go func() {
-		defer wg.Done()
-		videoURL, videoErr = player.GetVideoURLForEpisodeEnhanced(ctx, currentEpisodeCopy, anime)
-	}()
-
-	wg.Wait()
+	// Episode metadata and the stream URL are fetched in parallel.
+	loadErr := tui.RunLoading("Episodes › Play", "Loading episode…", func(lctx context.Context) error {
+		var wg sync.WaitGroup
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			// Metadata providers mutate Episodes. Keep that mutation isolated from
+			// stream resolution, which concurrently reads and may enrich anime.
+			episodeDataErr = api.GetEpisodeData(anime.MalID, episodeNum, &episodeDataAnime)
+			if episodeDataErr != nil {
+				util.Debugf("Error fetching episode data: %v", episodeDataErr)
+			}
+		}()
+		go func() {
+			defer wg.Done()
+			videoURL, videoErr = player.GetVideoURLForEpisodeEnhanced(lctx, currentEpisodeCopy, anime)
+		}()
+		wg.Wait()
+		return nil
+	})
+	if tui.IsCancelled(loadErr) {
+		return player.ErrBackToEpisodeSelection
+	}
 	if episodeDataErr == nil {
 		animeMutex.Lock()
 		anime.Episodes = append([]models.Episode(nil), episodeDataAnime.Episodes...)
