@@ -227,7 +227,7 @@ We use automated quality verification bots and tools:
 3. **Security Scanning**: `gosec` for insecure code patterns and `govulncheck`
    for known dependency vulnerabilities
 4. **Code Coverage**: Maintain minimum test coverage
-5. **Supply-chain Security**: Dependency review and automated Dependabot updates
+5. **Supply-chain Security**: Dependency review on pull requests
 6. **Semantic Security Analysis**: CodeQL extended security and quality queries
 
 ### Pre-commit Checks
@@ -254,18 +254,16 @@ go test -short -race -count=1 -covermode=atomic -coverprofile=coverage.out ./...
 
 ### CI/CD Pipeline
 
-Our continuous integration pipeline automatically:
+`ci.yml` runs on every push/PR to `main` and `dev`:
 
-- Runs `go fmt` checks
-- Runs `go vet`, `golangci-lint`, and all `go-critic` checks
-- Runs `gosec` security scanning
-- Runs `govulncheck` dependency vulnerability checks
-- Runs CodeQL extended security and quality analysis
-- Reviews dependency changes in pull requests
-- Runs race-enabled tests on Linux, macOS, and Windows
-- Enforces a 66% coverage floor and uploads the coverage artifact
-- Runs network-dependent source diagnostics in a separate scheduled workflow
-- Builds for multiple platforms
+- `golangci-lint` (gofmt, go vet, gosec, staticcheck, all `go-critic` checks)
+- `govulncheck` and dependency review on pull requests
+- Race-enabled tests on Linux, macOS, and Windows
+- Linux-only regression gates (goroutine leak check, jsonx fuzz) and a 66% coverage floor
+
+`release.yml` runs on a `v*` tag push: builds native CGO binaries, the macOS
+universal binary and the Windows installer, then publishes a GitHub Release.
+`codeql.yml` and `source-health.yml` run on a schedule.
 
 ## Testing
 

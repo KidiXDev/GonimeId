@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -19,64 +19,29 @@ env:
   GOTOOLCHAIN: local
 
 jobs:
-  quality:
-    name: Quality gates
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - name: Check out code
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - name: Set up Go
-        uses: actions/setup-go@v7
+      - uses: actions/setup-go@v7
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache: true
 
-      - name: Verify module integrity
-        shell: bash
+      - name: Verify go.mod is tidy
         run: |
           go mod verify
           go mod tidy
           git diff --exit-code -- go.mod go.sum
 
-      - name: Check formatting
-        shell: bash
-        run: |
-          unformatted="$(gofmt -l .)"
-          if [[ -n "$unformatted" ]]; then
-            echo "The following files are not gofmt formatted:"
-            echo "$unformatted"
-            exit 1
-          fi
-
-      - name: Run go vet
-        run: go vet ./...
-
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v9
+      # gofmt, go vet, gosec and go-critic all run inside golangci-lint (see .golangci.yml)
+      - uses: golangci/golangci-lint-action@v9
         with:
           version: v2.13.1
-          args: --timeout=20m
-
-  security:
-    name: Security gates
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-
-      - name: Set up Go
-        uses: actions/setup-go@v7
-        with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: true
 
       - name: Review dependency changes
         if: github.event_name == 'pull_request'
@@ -84,20 +49,11 @@ jobs:
         with:
           fail-on-severity: moderate
 
-      - name: Install security scanners
-        run: |
-          go install github.com/securego/gosec/v2/cmd/gosec@v2.28.0
-          go install golang.org/x/vuln/cmd/govulncheck@v1.6.0
-
-      - name: Scan source for insecure patterns
-        run: gosec -exclude-generated ./...
-
-      - name: Scan reachable dependencies for vulnerabilities
-        run: govulncheck ./...
+      - name: govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
   test:
-    name: Tests (${{ matrix.os }})
-    needs: quality
+    name: Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 35
     strategy:
@@ -105,429 +61,39 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - name: Check out code
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - name: Set up Go
-        uses: actions/setup-go@v7
+      - uses: actions/setup-go@v7
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache: true
 
-      - name: Download and verify dependencies
-        run: |
-          go mod download
-          go mod verify
-
-      - name: Install dependencies (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt update
-          sudo apt install -y mpv
-
-      - name: Install dependencies (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          $headers = @{ "User-Agent" = "GonimeId-CI" }
-          if ($env:GITHUB_TOKEN) { $headers["Authorization"] = "Bearer $env:GITHUB_TOKEN" }
-          # mpv-winbuild publishes separate releases per arch, so /releases/latest
-          # may be an aarch64-only release. Scan recent releases for the first
-          # one carrying an x86_64 build.
-          $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/zhongfly/mpv-winbuild/releases?per_page=15" -Headers $headers
-          $asset = $null
-          foreach ($release in $releases) {
-            $asset = $release.assets | Where-Object { $_.name -like "mpv-x86_64-v3-*.7z" } | Select-Object -First 1
-            if (-not $asset) { $asset = $release.assets | Where-Object { $_.name -like "mpv-x86_64-*.7z" } | Select-Object -First 1 }
-            if ($asset) { Write-Host "Using release $($release.tag_name)"; break }
-          }
-          if (-not $asset) { Write-Error "No x86_64 mpv asset found in the 15 most recent mpv-winbuild releases"; exit 1 }
-          Write-Host "Downloading $($asset.name)..."
-          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile mpv.7z -Headers @{ "Accept"="application/octet-stream"; "User-Agent"="GonimeId-CI" }
-          7z x mpv.7z -ompv_tmp -y
-          $mpvExe = Get-ChildItem -Path mpv_tmp -Recurse -Filter "mpv.exe" | Select-Object -First 1
-          $mpvDir = $mpvExe.DirectoryName
-          echo "$mpvDir" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
-          Write-Host "mpv added to PATH from $mpvDir"
-          & $mpvExe.FullName --version
-
-      - name: Install dependencies (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          brew install mpv
-
-      - name: Run macOS Socket Tests (macOS only)
-        if: runner.os == 'macOS'
-        run: |
-          go test -race -v ./internal/player/test/... -run "Socket|MacOS" -count=1
-
-      - name: Run Blogger proxy regression tests
-        shell: bash
-        run: >
-          go test -short -count=10 ./internal/player
-          -run '^(TestStartBloggerProxyServer|TestBloggerProxyClientSupportsHTTP11TLS)$'
-
-      - name: Run tests with race detector and coverage
+      - name: Test
         shell: bash
         run: go test -short -race -count=1 -covermode=atomic -coverprofile=coverage.out ./...
 
-      - name: Goroutine leak gate
+      - name: Regression gates
         if: runner.os == 'Linux'
         shell: bash
-        # Go 1.27's goroutineleak profile. Run without -race: the detector needs
-        # a plain GC cycle, and the self-test in internal/util/leakcheck proves
-        # the gate can actually fail.
-        run: go test -count=1 ./internal/util/leakcheck/... ./test/leak/...
-
-      - name: JSON decoder differential fuzz
-        if: runner.os == 'Linux'
-        shell: bash
-        # Guards the encoding/json/v2 migration: any input encoding/json accepts
-        # must decode identically through internal/util/jsonx.
         run: |
+          # Blogger proxy readiness: repeat to shake out races
+          go test -short -count=10 ./internal/player \
+            -run '^(TestStartBloggerProxyServer|TestBloggerProxyClientSupportsHTTP11TLS)$'
+
+          # Goroutine leak gate (Go 1.27 goroutineleak profile). Runs without -race:
+          # the detector needs a plain GC cycle.
+          go test -count=1 ./internal/util/leakcheck/... ./test/leak/...
+
+          # encoding/json/v2 migration guard: jsonx must decode like encoding/json
           go test ./internal/util/jsonx/ -run FuzzUnmarshalMatchesV1 \
             -fuzz FuzzUnmarshalMatchesV1 -fuzztime 45s
           go test ./internal/util/jsonx/ -run FuzzUnmarshalStructMatchesV1 \
             -fuzz FuzzUnmarshalStructMatchesV1 -fuzztime 45s
 
-      - name: Enforce minimum coverage
+      - name: Coverage floor (66%)
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          go tool cover -func=coverage.out
           go tool cover -func=coverage.out | awk '
-            /^total:/ {
-              coverage = $3
-              sub(/%$/, "", coverage)
-              if (coverage + 0 < 66.0) {
-                printf "coverage %.1f%% is below the required 66.0%%\n", coverage
-                exit 1
-              }
-            }'
-
-      - name: Upload coverage artifact
-        if: runner.os == 'Linux'
-        uses: actions/upload-artifact@v7
-        with:
-          name: coverage
-          path: coverage.out
-          if-no-files-found: error
-          retention-days: 14
-
-  build-binaries:
-    name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
-    needs: [quality, security, test]
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            goos: linux
-            goarch: amd64
-            binary_name: gonimeid-linux
-            asset_name: gonimeid-linux-amd64
-          - os: windows-latest
-            goos: windows
-            goarch: amd64
-            binary_name: gonimeid.exe
-            asset_name: gonimeid-windows-amd64
-          - os: macos-latest
-            goos: darwin
-            goarch: amd64
-            binary_name: gonimeid-darwin-amd64
-            asset_name: gonimeid-darwin-amd64
-          - os: macos-latest
-            goos: darwin
-            goarch: arm64
-            binary_name: gonimeid-darwin-arm64
-            asset_name: gonimeid-darwin-arm64
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v7
-
-      - name: Set up Go
-        uses: actions/setup-go@v7
-        with:
-          go-version: '1.27.1'
-
-      - name: Get dependencies
-        run: go mod download
-
-      - name: Build binary
-        shell: bash
-        env:
-          CGO_ENABLED: 0
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-        run: |
-          mkdir -p dist
-          go build -o dist/${{ matrix.binary_name }} -ldflags="-s -w" -trimpath ./cmd/gonimeid
-
-      - name: Create archive (Unix)
-        if: matrix.goos != 'windows'
-        shell: bash
-        run: |
-          cd dist
-          tar -czvf ${{ matrix.asset_name }}.tar.gz ${{ matrix.binary_name }}
-          if command -v sha256sum >/dev/null 2>&1; then
-            sha256sum ${{ matrix.asset_name }}.tar.gz > ${{ matrix.asset_name }}.tar.gz.sha256
-          elif command -v shasum >/dev/null 2>&1; then
-            shasum -a 256 ${{ matrix.asset_name }}.tar.gz > ${{ matrix.asset_name }}.tar.gz.sha256
-          fi
-
-      - name: Create archive (Windows)
-        if: matrix.goos == 'windows'
-        shell: pwsh
-        run: |
-          cd dist
-          Compress-Archive -Path ${{ matrix.binary_name }} -DestinationPath ${{ matrix.asset_name }}.zip
-          (Get-FileHash -Algorithm SHA256 ${{ matrix.asset_name }}.zip).Hash.ToLower() + "  ${{ matrix.asset_name }}.zip" | Out-File -Encoding utf8 ${{ matrix.asset_name }}.zip.sha256
-
-      - name: Upload binary artifact (Unix)
-        if: matrix.goos != 'windows'
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ matrix.asset_name }}
-          path: |
-            dist/${{ matrix.asset_name }}.tar.gz
-            dist/${{ matrix.asset_name }}.tar.gz.sha256
-          retention-days: 30
-
-      - name: Upload binary artifact (Windows)
-        if: matrix.goos == 'windows'
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ matrix.asset_name }}
-          path: |
-            dist/${{ matrix.asset_name }}.zip
-            dist/${{ matrix.asset_name }}.zip.sha256
-          retention-days: 30
-
-  # Windows Installer Job - Creates an offline installer with bundled mpv
-  build-windows-installer:
-    name: Build Windows installer
-    needs: [quality, security, test]
-    runs-on: windows-latest
-    timeout-minutes: 45
-    steps:
-      - name: Set up Go
-        uses: actions/setup-go@v7
-        with:
-          go-version: '1.27.1'
-
-      - name: Check out code
-        uses: actions/checkout@v7
-
-      - name: Get dependencies
-        run: go mod download
-
-      - name: Install GCC for CGO (SQLite support)
-        shell: pwsh
-        run: |
-          # Check if mingw/gcc is already available on the runner
-          $gccPaths = @("C:\ProgramData\mingw64\mingw64\bin", "C:\mingw64\bin", "C:\msys64\mingw64\bin")
-          $found = $false
-          foreach ($p in $gccPaths) {
-            if (Test-Path "$p\gcc.exe") {
-              echo $p | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
-              $env:PATH = "$p;$env:PATH"
-              $found = $true
-              Write-Host "Found existing GCC at $p"
-              break
-            }
-          }
-          if (-not $found) {
-            Write-Host "Installing MinGW via Chocolatey..."
-            for ($i = 1; $i -le 3; $i++) {
-              choco install mingw -y --no-progress && break
-              Write-Host "Retry $i/3..."; Start-Sleep -Seconds 10
-            }
-            $env:PATH = "C:\ProgramData\mingw64\mingw64\bin;$env:PATH"
-          }
-          gcc --version
-          Write-Host "GCC available for CGO builds"
-
-      - name: Build GonimeId binary with SQLite
-        shell: pwsh
-        env:
-          CGO_ENABLED: 1
-          GOOS: windows
-          GOARCH: amd64
-          CC: gcc
-        run: |
-          # Add MinGW to PATH
-          $env:PATH = "C:\ProgramData\mingw64\mingw64\bin;$env:PATH"
-          
-          # Create staging directory structure
-          New-Item -ItemType Directory -Force -Path "build/staging/bin"
-          
-          # Build the Go application with CGO enabled for SQLite support
-          go build -o build/staging/gonimeid.exe -ldflags="-s -w" -trimpath -tags="windows" ./cmd/gonimeid
-          
-          Write-Host "GonimeId binary built successfully with SQLite support"
-          Get-ChildItem build/staging/
-
-      - name: Download mpv for Windows
-        shell: pwsh
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Download latest mpv from zhongfly/mpv-winbuild GitHub releases
-          # Using GitHub API to get the latest release and download x86_64-v3 build
-          
-          Write-Host "Fetching recent mpv releases from zhongfly/mpv-winbuild..."
-
-          # Get release info from GitHub API (authenticated to avoid rate limits).
-          # mpv-winbuild publishes separate releases per arch, so /releases/latest
-          # may be an aarch64-only release — scan recent releases for the first
-          # one carrying an x86_64 build.
-          $headers = @{ "User-Agent" = "GonimeId-CI" }
-          if ($env:GITHUB_TOKEN) {
-            $headers["Authorization"] = "Bearer $env:GITHUB_TOKEN"
-          }
-          $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/zhongfly/mpv-winbuild/releases?per_page=15" -Headers $headers
-
-          $mpvAsset = $null
-          foreach ($releaseInfo in $releases) {
-            # Prefer the x86_64-v3 asset (optimized for modern CPUs)
-            $mpvAsset = $releaseInfo.assets | Where-Object { $_.name -like "mpv-x86_64-v3-*.7z" } | Select-Object -First 1
-            if (-not $mpvAsset) {
-              # Fallback to regular x86_64 if v3 not found
-              $mpvAsset = $releaseInfo.assets | Where-Object { $_.name -like "mpv-x86_64-*.7z" -and $_.name -notlike "*v3*" } | Select-Object -First 1
-            }
-            if ($mpvAsset) {
-              Write-Host "Using release: $($releaseInfo.tag_name)"
-              break
-            }
-          }
-
-          if (-not $mpvAsset) {
-            Write-Error "No x86_64 mpv asset found in the 15 most recent mpv-winbuild releases"
-            exit 1
-          }
-          
-          $mpvUrl = $mpvAsset.browser_download_url
-          $mpvArchive = "mpv.7z"
-          
-          Write-Host "Downloading: $($mpvAsset.name)"
-          Write-Host "URL: $mpvUrl"
-          
-          # Download mpv archive from GitHub releases with proper headers
-          Invoke-WebRequest -Uri $mpvUrl -OutFile $mpvArchive -Headers @{ "Accept" = "application/octet-stream"; "User-Agent" = "GonimeId-CI" }
-          
-          # Verify download
-          if (-not (Test-Path $mpvArchive) -or (Get-Item $mpvArchive).Length -lt 1000000) {
-            Write-Error "Download failed or file too small"
-            exit 1
-          }
-          
-          Write-Host "Downloaded mpv archive ($(((Get-Item $mpvArchive).Length / 1MB).ToString('F2')) MB), extracting..."
-          
-          # Extract using 7z (available on Windows runners)
-          7z x $mpvArchive -ompv_extracted -y
-          
-          # Find and copy mpv.exe and required DLLs to staging
-          $mpvExe = Get-ChildItem -Path "mpv_extracted" -Recurse -Filter "mpv.exe" | Select-Object -First 1
-          if ($mpvExe) {
-            $mpvDir = $mpvExe.DirectoryName
-            
-            # Copy mpv.exe
-            Copy-Item $mpvExe.FullName -Destination "build/staging/bin/mpv.exe"
-            Write-Host "mpv.exe copied to build/staging/bin/"
-            
-            # Copy all required DLLs from the same directory
-            $dlls = Get-ChildItem -Path $mpvDir -Filter "*.dll" -ErrorAction SilentlyContinue
-            if ($dlls) {
-              foreach ($dll in $dlls) {
-                Copy-Item $dll.FullName -Destination "build/staging/bin/" -Force
-                Write-Host "Copied DLL: $($dll.Name)"
-              }
-            }
-            
-            # Verify mpv version
-            & "build/staging/bin/mpv.exe" --version
-          } else {
-            Write-Error "mpv.exe not found in extracted archive"
-            exit 1
-          }
-          
-          # Cleanup extracted files
-          Remove-Item -Path "mpv_extracted" -Recurse -Force -ErrorAction SilentlyContinue
-          Remove-Item -Path $mpvArchive -Force -ErrorAction SilentlyContinue
-          
-          # Verify files exist
-          Write-Host "Staging directory contents:"
-          Get-ChildItem -Recurse build/staging/
-
-      - name: Install Inno Setup
-        shell: pwsh
-        run: |
-          # Check if Inno Setup is already installed
-          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-          if (Test-Path $iscc) {
-            Write-Host "Inno Setup already installed at: $iscc"
-          } else {
-            Write-Host "Installing Inno Setup via Chocolatey..."
-            for ($i = 1; $i -le 3; $i++) {
-              choco install innosetup -y --no-progress && break
-              Write-Host "Retry $i/3..."; Start-Sleep -Seconds 10
-            }
-            if (-not (Test-Path $iscc)) {
-              Write-Error "Inno Setup installation failed - ISCC.exe not found"
-              exit 1
-            }
-            Write-Host "Inno Setup installed successfully"
-          }
-
-      - name: Create dist directory
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path "dist"
-
-      - name: Build Windows Installer
-        shell: pwsh
-        run: |
-          # Add Inno Setup to PATH
-          $env:PATH = "C:\Program Files (x86)\Inno Setup 6;$env:PATH"
-          
-          # Verify ISCC exists
-          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-          if (-not (Test-Path $iscc)) {
-            Write-Error "Inno Setup compiler not found at $iscc"
-            exit 1
-          }
-          
-          Write-Host "Building installer with Inno Setup..."
-          & $iscc "build/install.iss"
-          
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "Inno Setup compilation failed"
-            exit 1
-          }
-          
-          Write-Host "Installer built successfully"
-          Get-ChildItem dist/
-
-      - name: Generate installer checksum
-        shell: pwsh
-        run: |
-          $installer = Get-ChildItem -Path "dist" -Filter "*.exe" | Select-Object -First 1
-          if ($installer) {
-            $hash = (Get-FileHash -Algorithm SHA256 $installer.FullName).Hash.ToLower()
-            "$hash  $($installer.Name)" | Out-File -Encoding utf8 "dist/$($installer.BaseName).sha256"
-            Write-Host "Checksum generated: $hash"
-          }
-
-      - name: Upload Windows Installer artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: gonimeid-windows-installer
-          path: |
-            dist/GonimeId-Installer-*.exe
-            dist/GonimeId-Installer-*.sha256
-          retention-days: 30
+            /^total:/ { sub(/%$/, "", $3); if ($3 + 0 < 66.0) { print "coverage " $3 "% < 66%"; exit 1 } }'
