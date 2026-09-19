@@ -36,9 +36,10 @@ func TestSearchAnimeEnhancedCore_ResultScreenCascade(t *testing.T) {
 			return nil
 		}
 
-		selected, err := searchAnimeEnhanced("frieren", "otakudesu", search, selectAnime, enrich)
+		selected, results, err := searchAnimeEnhancedWithResults("frieren", "otakudesu", search, selectAnime, enrich)
 		require.NoError(t, err)
 		assert.Equal(t, []*models.Anime{first, second}, selectedInput, "nil results are dropped, order is kept")
+		assert.Equal(t, []*models.Anime{first, second}, results)
 		assert.Equal(t, []source.SourceKind{source.Otakudesu}, gotKinds)
 		assert.Same(t, second, selected)
 		assert.Equal(t, "mock://cover", selected.ImageURL)

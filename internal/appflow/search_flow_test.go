@@ -34,7 +34,13 @@ func withSearchFn(t *testing.T, fn func(string, string) (*models.Anime, error)) 
 func withSearchWithRetryFn(t *testing.T, fn func(string, string) (*models.Anime, error)) {
 	t.Helper()
 	prev := searchWithRetryFn
-	searchWithRetryFn = fn
+	searchWithRetryFn = func(name, source string) (*models.Anime, []*models.Anime, error) {
+		anime, err := fn(name, source)
+		if anime == nil {
+			return nil, nil, err
+		}
+		return anime, []*models.Anime{anime}, err
+	}
 	t.Cleanup(func() { searchWithRetryFn = prev })
 }
 

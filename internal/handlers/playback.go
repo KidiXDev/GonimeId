@@ -70,11 +70,12 @@ func HandlePlaybackMode(animeName string) {
 	defer discordManager.Shutdown()
 
 	currentAnimeName := animeName
+	searchSession := &appflow.SearchSession{}
 
 	for {
 		// Use enhanced search with retry logic
 		searchTimer := util.StartTimer("SearchAnime:WithRetry")
-		anime, err := appflow.SearchAnimeWithRetry(currentAnimeName)
+		anime, err := searchSession.SearchWithRetry(currentAnimeName)
 		searchTimer.Stop()
 
 		if err != nil {
@@ -107,6 +108,7 @@ func HandlePlaybackMode(animeName string) {
 		// fresh search prompt instead of killing the session.
 		if errors.Is(epErr, api.ErrBackToSearch) {
 			util.Infof("Going back to new search...")
+			searchSession.Reset()
 			currentAnimeName = ""
 			continue
 		}
@@ -139,7 +141,7 @@ func HandlePlaybackMode(animeName string) {
 		// Check if user wants to go back to anime selection
 		if errors.Is(playbackErr, player.ErrBackToAnimeSelection) {
 			util.Infof("Going back to anime selection...")
-			// Keep the same search term to show the anime list again
+			// SearchSession reopens the prior list immediately without refetching.
 			continue
 		}
 

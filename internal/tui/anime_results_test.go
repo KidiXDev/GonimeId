@@ -290,6 +290,17 @@ func TestSelectAnimeWithRunner(t *testing.T) {
 		assert.Same(t, animes[1], selected)
 	})
 
+	t.Run("previous selection is focused", func(t *testing.T) {
+		selected, err := selectAnimeFromWithRunner(animes, animes[1], func(model tea.Model) (tea.Model, error) {
+			result := model.(*animeResultsModel)
+			assert.Equal(t, 1, result.results.Index())
+			result.selected = animes[1]
+			return result, nil
+		})
+		require.NoError(t, err)
+		assert.Same(t, animes[1], selected)
+	})
+
 	t.Run("mocked back", func(t *testing.T) {
 		_, err := selectAnimeWithRunner(animes, func(model tea.Model) (tea.Model, error) {
 			result := model.(*animeResultsModel)

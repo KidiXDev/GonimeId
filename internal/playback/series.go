@@ -141,8 +141,11 @@ func HandleSeries(ctx context.Context, anime *models.Anime, episodes []models.Ep
 			break
 		}
 
-		// Handle back/change anime - both options allow searching for a new anime
-		if userInput == "c" || userInput == "back" {
+		// Back restores the prior search results; Change anime starts a new search.
+		if userInput == "back" {
+			return player.ErrBackToAnimeSelection
+		}
+		if userInput == "c" {
 			newAnime, newEpisodes, err := ChangeAnimeLocal()
 			if err != nil {
 				if !tui.IsCancelled(err) {

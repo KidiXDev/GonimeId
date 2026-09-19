@@ -10,6 +10,7 @@ import (
 
 	"github.com/KidiXDev/GonimeId/internal/api"
 	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/tui"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -26,7 +27,8 @@ var appflowOverrideMu sync.Mutex
 // Pointer fields = "leave default if nil"; non-nil = swap for test.
 type appflowOverrides struct {
 	search        func(string, string) (*models.Anime, error)
-	searchRetry   func(string, string) (*models.Anime, error)
+	searchRetry   func(string, string) (*models.Anime, []*models.Anime, error)
+	selectResults func([]*models.Anime, *models.Anime) (*models.Anime, error)
 	aniList       func(string) (*models.AniListResponse, error)
 	sourceDetails func(*models.Anime) error
 	getEpisodes   func(*models.Anime) ([]models.Episode, error)
@@ -45,6 +47,7 @@ func withOverrides(t *testing.T, o appflowOverrides) {
 	prev := appflowOverrides{
 		search:        searchEnhancedFn,
 		searchRetry:   searchWithRetryFn,
+		selectResults: selectFromResultsFn,
 		aniList:       aniListFetchFn,
 		sourceDetails: sourceDetailsFetchFn,
 		getEpisodes:   getAnimeEpisodesEnhancedFn,
@@ -58,6 +61,9 @@ func withOverrides(t *testing.T, o appflowOverrides) {
 	}
 	if o.searchRetry != nil {
 		searchWithRetryFn = o.searchRetry
+	}
+	if o.selectResults != nil {
+		selectFromResultsFn = o.selectResults
 	}
 	if o.aniList != nil {
 		aniListFetchFn = o.aniList
@@ -81,6 +87,7 @@ func withOverrides(t *testing.T, o appflowOverrides) {
 	t.Cleanup(func() {
 		searchEnhancedFn = prev.search
 		searchWithRetryFn = prev.searchRetry
+		selectFromResultsFn = prev.selectResults
 		aniListFetchFn = prev.aniList
 		sourceDetailsFetchFn = prev.sourceDetails
 		getAnimeEpisodesEnhancedFn = prev.getEpisodes
@@ -409,13 +416,13 @@ func TestSearchAnimeWithRetry_RetriesUntilSuccess(t *testing.T) {
 	want := &models.Anime{Name: "FoundIt"}
 	var attempts atomic.Int32
 	withOverrides(t, appflowOverrides{
-		searchRetry: func(name, _ string) (*models.Anime, error) {
+		searchRetry: func(name, _ string) (*models.Anime, []*models.Anime, error) {
 			n := attempts.Add(1)
 			if n < 3 {
-				return nil, errors.New("not yet")
+				return nil, nil, errors.New("not yet")
 			}
 			assert.Equal(t, "third", name, "third attempt must use prompted name")
-			return want, nil
+			return want, []*models.Anime{want}, nil
 		},
 		promptForName: func(_ string) (string, error) {
 			n := attempts.Load()
@@ -439,12 +446,12 @@ func TestSearchAnimeWithRetry_BackToSearchBranch(t *testing.T) {
 	want := &models.Anime{Name: "FoundIt"}
 	var attempts atomic.Int32
 	withOverrides(t, appflowOverrides{
-		searchRetry: func(name, _ string) (*models.Anime, error) {
+		searchRetry: func(name, _ string) (*models.Anime, []*models.Anime, error) {
 			n := attempts.Add(1)
 			if n == 1 {
-				return nil, api.ErrBackToSearch
+				return nil, nil, api.ErrBackToSearch
 			}
-			return want, nil
+			return want, []*models.Anime{want}, nil
 		},
 		promptForName: func(string) (string, error) { return "newname", nil },
 	})
@@ -457,8 +464,8 @@ func TestSearchAnimeWithRetry_BackToSearchBranch(t *testing.T) {
 
 func TestSearchAnimeWithRetry_PromptCancelled(t *testing.T) {
 	withOverrides(t, appflowOverrides{
-		searchRetry: func(string, string) (*models.Anime, error) {
-			return nil, errors.New("no result")
+		searchRetry: func(string, string) (*models.Anime, []*models.Anime, error) {
+			return nil, nil, errors.New("no result")
 		},
 		promptForName: func(string) (string, error) {
 			return "", errors.New("search cancelled by user")
@@ -474,12 +481,12 @@ func TestSearchAnimeWithRetry_NilAnimeContinuesLoop(t *testing.T) {
 	want := &models.Anime{Name: "Eventually"}
 	var attempts atomic.Int32
 	withOverrides(t, appflowOverrides{
-		searchRetry: func(string, string) (*models.Anime, error) {
+		searchRetry: func(string, string) (*models.Anime, []*models.Anime, error) {
 			n := attempts.Add(1)
 			if n == 1 {
-				return nil, nil // nil anime, no error → continues
+				return nil, nil, nil // nil anime with no error → continues
 			}
-			return want, nil
+			return want, []*models.Anime{want}, nil
 		},
 		promptForName: func(string) (string, error) { return "retry", nil },
 	})
@@ -487,6 +494,61 @@ func TestSearchAnimeWithRetry_NilAnimeContinuesLoop(t *testing.T) {
 	got, err := SearchAnimeWithRetry("first")
 	require.NoError(t, err)
 	assert.Equal(t, want, got)
+}
+
+func TestSearchSession_ReopensResultsUntilReset(t *testing.T) {
+	first := &models.Anime{Name: "Frieren", Source: "Otakudesu"}
+	second := &models.Anime{Name: "Frieren", Source: "YLnime"}
+	results := []*models.Anime{first, second}
+	var searches, reopens atomic.Int32
+
+	withOverrides(t, appflowOverrides{
+		searchRetry: func(string, string) (*models.Anime, []*models.Anime, error) {
+			searches.Add(1)
+			return first, results, nil
+		},
+		selectResults: func(got []*models.Anime, selected *models.Anime) (*models.Anime, error) {
+			reopens.Add(1)
+			assert.Equal(t, results, got)
+			assert.Same(t, first, selected)
+			return second, nil
+		},
+	})
+
+	session := &SearchSession{}
+	selected, err := session.SearchWithRetry("frieren")
+	require.NoError(t, err)
+	assert.Same(t, first, selected)
+
+	selected, err = session.SearchWithRetry("frieren")
+	require.NoError(t, err)
+	assert.Same(t, second, selected)
+	assert.Equal(t, int32(1), searches.Load(), "Back navigation must not refetch")
+	assert.Equal(t, int32(1), reopens.Load())
+
+	session.Reset()
+	_, err = session.SearchWithRetry("frieren")
+	require.NoError(t, err)
+	assert.Equal(t, int32(2), searches.Load(), "a new search must bypass cached results")
+}
+
+func TestSearchSession_CancelledResultsExitWithoutPrompt(t *testing.T) {
+	result := &models.Anime{Name: "Frieren"}
+	prompted := false
+	withOverrides(t, appflowOverrides{
+		selectResults: func([]*models.Anime, *models.Anime) (*models.Anime, error) {
+			return nil, tui.ErrSelectionCancelled
+		},
+		promptForName: func(string) (string, error) {
+			prompted = true
+			return "", nil
+		},
+	})
+
+	session := &SearchSession{results: []*models.Anime{result}, selected: result}
+	_, err := session.SearchWithRetry("frieren")
+	assert.ErrorIs(t, err, tui.ErrSelectionCancelled)
+	assert.False(t, prompted)
 }
 
 // ---------------------------------------------------------------------------

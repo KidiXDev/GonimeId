@@ -136,8 +136,11 @@ func HandleMovie(ctx context.Context, anime *models.Anime, episodes []models.Epi
 			break
 		}
 
-		// Handle back/change anime for movies - both options allow searching for a new anime
-		if userInput == "c" || userInput == "back" {
+		// Back restores the prior search results; Change movie starts a new search.
+		if userInput == "back" {
+			return player.ErrBackToAnimeSelection
+		}
+		if userInput == "c" {
 			newAnime, newEpisodes, err := ChangeAnimeLocal()
 			if err != nil {
 				if !tui.IsCancelled(err) {

@@ -114,7 +114,30 @@ func fetchStreamViaRegistry(episode *models.Episode, anime *models.Anime, qualit
 
 // SearchAnimeEnhanced fans a free-text search out across every registered source.
 func SearchAnimeEnhanced(name, src string) (*models.Anime, error) {
-	return searchAnimeEnhanced(name, src, searchFetchFn, tui.SelectAnime, enrichAnimeData)
+	anime, _, err := SearchAnimeEnhancedWithResults(name, src)
+	return anime, err
+}
+
+// SearchAnimeEnhancedWithResults returns the selected anime and the result set
+// it came from so an interactive session can reopen the list without refetching.
+func SearchAnimeEnhancedWithResults(name, src string) (*models.Anime, []*models.Anime, error) {
+	return searchAnimeEnhancedWithResults(name, src, searchFetchFn, tui.SelectAnime, enrichAnimeData)
+}
+
+// SelectAnimeFromResults reopens a previously fetched result set, keeping the
+// last selection focused. Detail enrichment remains the caller's next step.
+func SelectAnimeFromResults(animes []*models.Anime, selected *models.Anime) (*models.Anime, error) {
+	anime, err := tui.SelectAnimeFrom(animes, selected)
+	if errors.Is(err, tui.ErrSelectionBack) {
+		return nil, ErrBackToSearch
+	}
+	if err != nil {
+		return nil, fmt.Errorf("anime selection cancelled: %w", err)
+	}
+	if anime == nil {
+		return nil, fmt.Errorf("anime selection returned nil")
+	}
+	return anime, nil
 }
 
 func searchAnimeEnhanced(
@@ -124,6 +147,17 @@ func searchAnimeEnhanced(
 	selectAnime func([]*models.Anime) (*models.Anime, error),
 	enrich func(*models.Anime) error,
 ) (*models.Anime, error) {
+	anime, _, err := searchAnimeEnhancedWithResults(name, src, search, selectAnime, enrich)
+	return anime, err
+}
+
+func searchAnimeEnhancedWithResults(
+	name string,
+	src string,
+	search SearchFetchFunc,
+	selectAnime func([]*models.Anime) (*models.Anime, error),
+	enrich func(*models.Anime) error,
+) (*models.Anime, []*models.Anime, error) {
 	// Map the optional source selector to the registry kinds to search. Empty
 	// = all sources; a specific kind narrows the fan-out.
 	var registryKinds []apisource.SourceKind
@@ -150,7 +184,7 @@ func searchAnimeEnhanced(
 		animes, searchErr = search(context.Background(), name, registryKinds)
 	})
 	if searchErr != nil {
-		return nil, fmt.Errorf("failed to search: %w", searchErr)
+		return nil, nil, fmt.Errorf("failed to search: %w", searchErr)
 	}
 	validAnimes := make([]*models.Anime, 0, len(animes))
 	for _, anime := range animes {
@@ -161,22 +195,22 @@ func searchAnimeEnhanced(
 	animes = validAnimes
 
 	if len(animes) == 0 {
-		return nil, fmt.Errorf("no results found for: %s", name)
+		return nil, nil, fmt.Errorf("no results found for: %s", name)
 	}
 	util.Debug("Search results summary", "total", len(animes))
 
 	if selectAnime == nil {
-		return nil, fmt.Errorf("anime selection not configured")
+		return nil, animes, fmt.Errorf("anime selection not configured")
 	}
 	selectedAnime, err := selectAnime(animes)
 	if errors.Is(err, tui.ErrSelectionBack) {
-		return nil, ErrBackToSearch
+		return nil, animes, ErrBackToSearch
 	}
 	if err != nil {
-		return nil, fmt.Errorf("anime selection cancelled: %w", err)
+		return nil, animes, fmt.Errorf("anime selection cancelled: %w", err)
 	}
 	if selectedAnime == nil {
-		return nil, fmt.Errorf("anime selection returned nil")
+		return nil, animes, fmt.Errorf("anime selection returned nil")
 	}
 	util.Debug("Anime selected", "name", selectedAnime.Name, "source", selectedAnime.Source)
 
@@ -189,7 +223,7 @@ func searchAnimeEnhanced(
 		}
 	}
 
-	return selectedAnime, nil
+	return selectedAnime, animes, nil
 }
 
 // Enhanced download support

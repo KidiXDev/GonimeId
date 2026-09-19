@@ -226,11 +226,20 @@ type animeResultsRunner func(tea.Model) (tea.Model, error)
 
 // SelectAnime opens the result screen and returns the chosen anime.
 func SelectAnime(animes []*models.Anime) (*models.Anime, error) {
-	return selectAnimeWithRunner(animes, runScreen)
+	return SelectAnimeFrom(animes, nil)
+}
+
+// SelectAnimeFrom opens the result screen with the previous choice focused.
+func SelectAnimeFrom(animes []*models.Anime, selected *models.Anime) (*models.Anime, error) {
+	return selectAnimeFromWithRunner(animes, selected, runScreen)
 }
 
 // selectAnimeWithRunner isolates terminal execution for deterministic tests.
 func selectAnimeWithRunner(animes []*models.Anime, run animeResultsRunner) (*models.Anime, error) {
+	return selectAnimeFromWithRunner(animes, nil, run)
+}
+
+func selectAnimeFromWithRunner(animes []*models.Anime, selected *models.Anime, run animeResultsRunner) (*models.Anime, error) {
 	valid := make([]*models.Anime, 0, len(animes))
 	for _, anime := range animes {
 		if anime != nil {
@@ -244,7 +253,15 @@ func selectAnimeWithRunner(animes []*models.Anime, run animeResultsRunner) (*mod
 		return nil, fmt.Errorf("anime result runner not configured")
 	}
 
-	final, err := run(newAnimeResultsModel(valid))
+	model := newAnimeResultsModel(valid)
+	for i, anime := range valid {
+		if anime == selected {
+			model.results.Select(i)
+			break
+		}
+	}
+
+	final, err := run(model)
 	if err != nil {
 		return nil, fmt.Errorf("run anime result screen: %w", err)
 	}

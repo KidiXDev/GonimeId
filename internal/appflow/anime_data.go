@@ -21,8 +21,11 @@ var (
 	// searchEnhancedFn is the underlying search implementation.
 	searchEnhancedFn = api.SearchAnimeEnhanced
 
-	// searchWithRetryFn is the per-attempt search used inside SearchAnimeWithRetry.
-	searchWithRetryFn = api.SearchAnimeEnhanced
+	// searchWithRetryFn is the per-attempt search used inside SearchSession.
+	searchWithRetryFn = api.SearchAnimeEnhancedWithResults
+
+	// selectFromResultsFn reopens a session's cached result list.
+	selectFromResultsFn = api.SelectAnimeFromResults
 
 	// aniListFetchFn fetches AniList metadata for an anime title.
 	aniListFetchFn = api.FetchAnimeFromAniList
@@ -107,8 +110,21 @@ func SearchAnimeEnhanced(name string) (*models.Anime, error) {
 	return anime, nil
 }
 
-// SearchAnimeWithRetry - searches for anime with retry logic on failure
-func SearchAnimeWithRetry(name string) (*models.Anime, error) {
+// SearchSession keeps one result list for the lifetime of an interactive
+// playback flow. Reset starts a deliberately fresh search.
+type SearchSession struct {
+	results  []*models.Anime
+	selected *models.Anime
+}
+
+func (s *SearchSession) Reset() {
+	s.results = nil
+	s.selected = nil
+}
+
+// SearchWithRetry reopens cached results when available, otherwise searches
+// providers and retains the returned list for Back navigation.
+func (s *SearchSession) SearchWithRetry(name string) (*models.Anime, error) {
 	currentName := name
 
 	for {
@@ -122,11 +138,25 @@ func SearchAnimeWithRetry(name string) (*models.Anime, error) {
 		} else {
 			util.Debugf("Searching for: %s (searching all sources)", currentName)
 		}
-		anime, searchErr := searchWithRetryFn(currentName, source)
+		var anime *models.Anime
+		var searchErr error
+		if len(s.results) > 0 {
+			anime, searchErr = selectFromResultsFn(s.results, s.selected)
+		} else {
+			var results []*models.Anime
+			anime, results, searchErr = searchWithRetryFn(currentName, source)
+			if searchErr == nil && anime != nil {
+				s.results = results
+			}
+		}
 
 		if searchErr == nil && anime != nil {
+			s.selected = anime
 			util.Debugf("[PERF] SearchAnimeWithRetry completed in %v", time.Since(searchStart))
 			return anime, nil
+		}
+		if tui.IsCancelled(searchErr) && !errors.Is(searchErr, api.ErrBackToSearch) {
+			return nil, searchErr
 		}
 
 		// Anything but "back" is shown on the prompt screen's footer notice.
@@ -138,8 +168,15 @@ func SearchAnimeWithRetry(name string) (*models.Anime, error) {
 		if promptErr != nil {
 			return nil, promptErr
 		}
+		s.Reset()
 		currentName = nextName
 	}
+}
+
+// SearchAnimeWithRetry performs a standalone search without retaining state
+// after it returns. Interactive playback should keep a SearchSession instead.
+func SearchAnimeWithRetry(name string) (*models.Anime, error) {
+	return (&SearchSession{}).SearchWithRetry(name)
 }
 
 // FetchAnimeDetails enriches anime with metadata from AniList and/or the
