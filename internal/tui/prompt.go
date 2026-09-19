@@ -51,6 +51,13 @@ func (m *promptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.input.SetWidth(max(w-6, 10))
 		return m, nil
 	case tea.KeyPressMsg:
+		if m.shell.Logs && msg.String() != "ctrl+c" {
+			switch msg.String() {
+			case LogsToggleKey, "esc", "q", "enter":
+				m.shell.Logs = false
+			}
+			return m, nil
+		}
 		switch msg.String() {
 		case "ctrl+c":
 			m.err = ErrPickCancelled
@@ -86,7 +93,7 @@ func (m *promptModel) View() tea.View {
 	if m.hint != "" {
 		lines = append(lines, "", "  "+m.theme.Warn.Render(m.hint))
 	}
-	view := tea.NewView(m.shell.Render(strings.Join(lines, "\n"), "enter search · esc quit"))
+	view := tea.NewView(m.shell.Render(strings.Join(lines, "\n"), "enter search · esc back"))
 	view.AltScreen = true
 	view.WindowTitle = "GonimeId - " + m.opts.Title
 	return view
@@ -95,17 +102,7 @@ func (m *promptModel) View() tea.View {
 // Prompt asks for one line of text on a full shell screen. Esc is ErrPickBack,
 // ctrl+c is ErrPickCancelled.
 func Prompt(opts PromptOptions) (string, error) {
-	return promptWithRunner(opts, func(model tea.Model) (tea.Model, error) {
-		var final tea.Model
-		err := RunClean(func() error {
-			return busy(func() error {
-				var runErr error
-				final, runErr = NewProgram(model).Run()
-				return runErr
-			})
-		})
-		return final, err
-	})
+	return promptWithRunner(opts, runScreen)
 }
 
 type promptRunner func(tea.Model) (tea.Model, error)

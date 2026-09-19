@@ -138,7 +138,7 @@ func TestShellRender(t *testing.T) {
 			assert.Contains(t, got, tt.wantFooter)
 			assert.Equal(t, tt.wantBreadcrumb, strings.Contains(got, "Search > Results"))
 			assert.Contains(t, got, strings.Repeat("─", tt.width))
-			assert.GreaterOrEqual(t, lipgloss.Height(got), 5)
+			assert.Equal(t, shell.Height, lipgloss.Height(got), "short screens must keep the footer at the bottom")
 		})
 	}
 

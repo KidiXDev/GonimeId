@@ -251,6 +251,10 @@ func SuppressConsoleLogging() func() {
 // the debug log and how to follow it in real-time from another terminal.
 // The follow command adapts to the user's OS. Plain text when ANSI unsafe.
 func showDebugBanner() {
+	if tui.ScreensActive() {
+		tui.AppendLog(tui.LogInfo, "Debug log → "+LogFilePath)
+		return
+	}
 	// Pick the right "follow file" command for each OS
 	var followCmd string
 	switch runtime.GOOS {

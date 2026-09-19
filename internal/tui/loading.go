@@ -13,7 +13,7 @@ import (
 	"golang.org/x/term"
 )
 
-// activePrograms counts shell screens currently on the terminal. RunLoading
+// activePrograms counts active screen requests, including delayed loaders. RunLoading
 // degrades to running the work inline when one is already up: two Bubble Tea
 // programs on one terminal corrupt each other.
 var activePrograms atomic.Int32
@@ -128,21 +128,45 @@ func RunLoading(breadcrumb, title string, work func(ctx context.Context) error) 
 	if activePrograms.Load() > 0 || !term.IsTerminal(int(os.Stdin.Fd())) {
 		return work(context.Background())
 	}
+	return busy(func() error {
+		return runLoadingWithRunner(breadcrumb, title, work, runScreen)
+	})
+}
+
+func runLoadingWithRunner(breadcrumb, title string, work func(context.Context) error, run func(tea.Model) (tea.Model, error)) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	result := make(chan error, 1)
-	go func() { result <- work(ctx) }()
-
+	done := make(chan struct{})
+	var workErr error
+	go func() {
+		workErr = work(ctx)
+		result <- workErr
+		close(done)
+	}()
+	// Keep the preceding screen visible for quick cache/metadata lookups.
+	// Work starts immediately; this delays only the loading decoration.
+	timer := time.NewTimer(120 * time.Millisecond)
+	defer timer.Stop()
+	select {
+	case <-done:
+		return workErr
+	case <-timer.C:
+	}
 	model := newLoadingModel(breadcrumb, title, cancel, result)
-	runErr := RunClean(func() error {
-		return busy(func() error {
-			_, err := NewProgram(model).Run()
-			return err
-		})
-	})
+	_, runErr := run(model)
 	if runErr != nil {
-		// The screen failed, not the work: wait for the work and report it.
-		return <-result
+		cancel()
+		// The UI may already have consumed result before the renderer stopped.
+		// Wait on a broadcast completion signal, never consume that result twice.
+		<-done
+		if IsCancelled(runErr) {
+			return runErr
+		}
+		if workErr != nil {
+			return workErr
+		}
+		return runErr
 	}
 	if model.stopped {
 		return ErrPickCancelled
@@ -153,5 +177,5 @@ func RunLoading(breadcrumb, title string, work func(ctx context.Context) error) 
 // IsCancelled reports whether err came from the user backing out of a screen
 // (Esc/ctrl+c), as opposed to the work itself failing.
 func IsCancelled(err error) bool {
-	return errors.Is(err, ErrPickCancelled) || errors.Is(err, ErrPickBack) || errors.Is(err, context.Canceled)
+	return errors.Is(err, ErrPickCancelled) || errors.Is(err, ErrPickBack) || errors.Is(err, context.Canceled) || errors.Is(err, tea.ErrInterrupted) || errors.Is(err, ErrSelectionCancelled) || errors.Is(err, ErrSelectionBack)
 }

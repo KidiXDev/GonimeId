@@ -29,7 +29,7 @@ func GetAniSkipData(animeMalId, episode int) (string, error) {
 	defer func() {
 		err := resp.Body.Close()
 		if err != nil {
-			fmt.Println("Error closing response body:", err)
+			util.Info("Error closing response body:", err)
 		}
 	}()
 
@@ -81,7 +81,7 @@ func ParseAniSkipResponse(responseText string, episode *models.Episode, timePrec
 		case "ed":
 			episode.SkipTimes.Ed = models.Skip{Start: start, End: end}
 		default:
-			fmt.Printf("Unknown skip type encountered: %s\n", result.Type)
+			util.Infof("Unknown skip type encountered: %s\n", result.Type)
 		}
 	}
 

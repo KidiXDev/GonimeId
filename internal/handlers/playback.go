@@ -40,6 +40,7 @@ func HandlePlaybackMode(animeName string) {
 	if term.IsTerminal(os.Stdin.Fd()) {
 		restore := util.SuppressConsoleLogging()
 		defer func() {
+			tui.CloseScreens()
 			restore()
 			util.EchoLastError()
 		}()

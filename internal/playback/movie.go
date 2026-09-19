@@ -3,8 +3,6 @@ package playback
 import (
 	"context"
 	"errors"
-	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -15,6 +13,7 @@ import (
 	"github.com/KidiXDev/GonimeId/internal/discord"
 	"github.com/KidiXDev/GonimeId/internal/models"
 	"github.com/KidiXDev/GonimeId/internal/player"
+	"github.com/KidiXDev/GonimeId/internal/tui"
 	"github.com/KidiXDev/GonimeId/internal/util"
 )
 
@@ -35,7 +34,7 @@ func HandleMovie(ctx context.Context, anime *models.Anime, episodes []models.Epi
 		// FlixHQ content already has metadata from TMDB/OMDb
 		if !anime.IsMovieOrTV() && anime.MalID > 0 {
 			if err := api.GetMovieData(anime.MalID, anime); err != nil {
-				log.Printf("Error fetching movie/OVA data: %v", err)
+				util.Warnf("Error fetching movie/OVA data: %v", err)
 			}
 		}
 
@@ -48,7 +47,7 @@ func HandleMovie(ctx context.Context, anime *models.Anime, episodes []models.Epi
 		videoURL, videoErr = player.GetVideoURLForEpisodeEnhanced(ctx, &episodes[0], anime)
 
 		if videoErr != nil {
-			log.Printf("Failed to extract video URL: %v", util.ErrorHandler(videoErr))
+			util.Warnf("Failed to extract video URL: %v", util.ErrorHandler(videoErr))
 			// Return to anime selection
 			return player.ErrBackToAnimeSelection
 		}
@@ -89,7 +88,7 @@ func HandleMovie(ctx context.Context, anime *models.Anime, episodes []models.Epi
 
 		// Handle playback errors and user interaction
 		if errors.Is(playErr, player.ErrUserQuit) {
-			log.Println("Quitting application as per user request.")
+			util.Info("Quitting application as per user request.")
 			break
 		}
 
@@ -97,7 +96,9 @@ func HandleMovie(ctx context.Context, anime *models.Anime, episodes []models.Epi
 		if errors.Is(playErr, player.ErrChangeAnime) {
 			newAnime, newEpisodes, changeErr := ChangeAnimeLocal()
 			if changeErr != nil {
-				log.Printf("Error changing anime: %v", changeErr)
+				if !tui.IsCancelled(changeErr) {
+					util.Warnf("Error changing anime: %v", changeErr)
+				}
 				continue // Stay with current anime if change fails
 			}
 
@@ -111,7 +112,7 @@ func HandleMovie(ctx context.Context, anime *models.Anime, episodes []models.Epi
 			series := !newAnime.IsMovie() && totalEpisodes > 1
 			if series {
 				// If new anime is a series, switch to series handler
-				log.Printf("Switched to series: %s with %d episodes.\n", anime.Name, totalEpisodes)
+				util.Infof("Switched to series: %s with %d episodes.\n", anime.Name, totalEpisodes)
 				if seriesErr := HandleSeries(ctx, anime, episodes, totalEpisodes, discordEnabled); seriesErr != nil {
 					if errors.Is(seriesErr, player.ErrBackToAnimeSelection) {
 						return seriesErr
@@ -120,18 +121,18 @@ func HandleMovie(ctx context.Context, anime *models.Anime, episodes []models.Epi
 				break
 			}
 
-			fmt.Printf("Switched to movie: %s\n", anime.Name)
+			util.Infof("Switched to movie: %s\n", anime.Name)
 			continue // Continue with new movie
 		}
 
 		if playErr != nil {
-			log.Printf("Error during movie playback: %v", playErr)
+			util.Warnf("Error during movie playback: %v", playErr)
 		}
 
 		// Ask user what to do next after movie finishes
 		userInput := GetUserInput(true)
 		if userInput == "q" {
-			log.Println("Quitting application as per user request.")
+			util.Info("Quitting application as per user request.")
 			break
 		}
 
@@ -139,7 +140,9 @@ func HandleMovie(ctx context.Context, anime *models.Anime, episodes []models.Epi
 		if userInput == "c" || userInput == "back" {
 			newAnime, newEpisodes, err := ChangeAnimeLocal()
 			if err != nil {
-				log.Printf("Error changing anime: %v", err)
+				if !tui.IsCancelled(err) {
+					util.Warnf("Error changing anime: %v", err)
+				}
 				continue // Stay with current anime if change fails
 			}
 
@@ -153,7 +156,7 @@ func HandleMovie(ctx context.Context, anime *models.Anime, episodes []models.Epi
 			series := !newAnime.IsMovie() && totalEpisodes > 1
 			if series {
 				// If new anime is a series, switch to series handler
-				log.Printf("Switched to series: %s with %d episodes.\n", anime.Name, totalEpisodes)
+				util.Infof("Switched to series: %s with %d episodes.\n", anime.Name, totalEpisodes)
 				if err := HandleSeries(ctx, anime, episodes, totalEpisodes, discordEnabled); err != nil {
 					if errors.Is(err, player.ErrBackToAnimeSelection) {
 						return err
@@ -162,12 +165,12 @@ func HandleMovie(ctx context.Context, anime *models.Anime, episodes []models.Epi
 				break
 			}
 
-			fmt.Printf("Switched to movie: %s\n", anime.Name)
+			util.Infof("Switched to movie: %s\n", anime.Name)
 			continue // Continue with new movie
 		}
 
 		// For movies, other navigation options don't make much sense, so just continue playing the same movie
-		log.Println("Replaying the same movie...")
+		util.Info("Replaying the same movie...")
 	}
 	return nil
 }

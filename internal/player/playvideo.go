@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"charm.land/huh/v2"
 	"github.com/KidiXDev/GonimeId/internal/api"
 	"github.com/KidiXDev/GonimeId/internal/discord"
 	"github.com/KidiXDev/GonimeId/internal/models"
@@ -386,7 +385,6 @@ func applySkipTimes(socketPath string, episode *models.Episode) {
 // showResumeDialog displays a compact dialog asking if user wants to resume playback.
 // For movies (single-title playback) the wording avoids "episode N".
 func showResumeDialog(episodeNum, timeSeconds int, isMovie bool) (bool, error) {
-	var resume bool
 
 	// Convert seconds to minutes and seconds for better readability
 	minutes := timeSeconds / 60
@@ -404,18 +402,16 @@ func showResumeDialog(episodeNum, timeSeconds int, isMovie bool) (bool, error) {
 		title = fmt.Sprintf("Resume movie from %s?", timeStr)
 	}
 
-	confirm := huh.NewConfirm().
-		Title(title).
-		Description("You can continue watching from where you left off.").
-		Affirmative("Yes, resume").
-		Negative("No, start from beginning").
-		Value(&resume)
-
-	if err := tui.RunClean(confirm.Run); err != nil {
+	index, err := tui.PickLabels([]string{"Yes, resume", "No, start from beginning"}, tui.PickOptions{
+		Breadcrumb:   title,
+		WindowTitle:  "GonimeId - Resume",
+		InitialIndex: 1,
+	})
+	if err != nil {
 		return false, fmt.Errorf("error showing dialog: %w", err)
 	}
+	return index == 0, nil
 
-	return resume, nil
 }
 
 // playVideo plays the video and manages interactions
@@ -1369,7 +1365,7 @@ func handleUserInput(
 // playNextEpisode plays next episode
 func playNextEpisode(newIndex int, episodes []models.Episode, malID, anilistID int, updater *discord.RichPresenceUpdater, stopTracking chan struct{}, socketPath string) error {
 	if newIndex >= len(episodes) {
-		fmt.Println("You are on the last episode")
+		util.Info("You are on the last episode")
 		return errStayInPlayerMenu
 	}
 	return switchEpisode(newIndex, episodes, malID, anilistID, updater, stopTracking, socketPath)
@@ -1378,7 +1374,7 @@ func playNextEpisode(newIndex int, episodes []models.Episode, malID, anilistID i
 // playPreviousEpisode plays previous episode
 func playPreviousEpisode(newIndex int, episodes []models.Episode, malID, anilistID int, updater *discord.RichPresenceUpdater, stopTracking chan struct{}, socketPath string) error {
 	if newIndex < 0 {
-		fmt.Println("You are on the first episode")
+		util.Info("You are on the first episode")
 		return errStayInPlayerMenu
 	}
 	return switchEpisode(newIndex, episodes, malID, anilistID, updater, stopTracking, socketPath)
@@ -1489,9 +1485,9 @@ func switchEpisode(newIndex int, episodes []models.Episode, malID, anilistID int
 func skipIntro(socketPath string, episode *models.Episode) {
 	if episode.SkipTimes.Op.End > 0 {
 		_, _ = mpvSendCommand(socketPath, []any{"seek", episode.SkipTimes.Op.End, "absolute"})
-		fmt.Printf("Intro skipped to %ds\n", episode.SkipTimes.Op.End)
+		util.Infof("Intro skipped to %ds\n", episode.SkipTimes.Op.End)
 	} else {
-		fmt.Println("Intro skip data not available")
+		util.Info("Intro skip data not available")
 	}
 }
 
@@ -1499,12 +1495,12 @@ func skipIntro(socketPath string, episode *models.Episode) {
 func selectAudioTrack(socketPath string) {
 	tracks, err := GetAudioTracks(socketPath)
 	if err != nil {
-		fmt.Printf("Error getting audio tracks: %v\n", err)
+		util.Warnf("Error getting audio tracks: %v\n", err)
 		return
 	}
 
 	if len(tracks) == 0 {
-		fmt.Println("No audio tracks available")
+		util.Info("No audio tracks available")
 		return
 	}
 
@@ -1587,9 +1583,9 @@ func selectAudioTrack(socketPath string) {
 
 	selected := trackItems[idx].ID
 	if err := SetAudioTrack(socketPath, selected); err != nil {
-		fmt.Printf("Error setting audio track: %v\n", err)
+		util.Warnf("Error setting audio track: %v\n", err)
 	} else {
-		fmt.Printf("Audio track changed to %d\n", selected)
+		util.Infof("Audio track changed to %d\n", selected)
 	}
 }
 
@@ -1597,7 +1593,7 @@ func selectAudioTrack(socketPath string) {
 func selectSubtitleTrack(socketPath string) {
 	tracks, err := GetSubtitleTracks(socketPath)
 	if err != nil {
-		fmt.Printf("Error getting subtitle tracks: %v\n", err)
+		util.Warnf("Error getting subtitle tracks: %v\n", err)
 		return
 	}
 
@@ -1668,12 +1664,12 @@ func selectSubtitleTrack(socketPath string) {
 	if selected == 0 {
 		// Disable subtitles
 		_, _ = mpvSendCommand(socketPath, []any{"set_property", "sid", "no"})
-		fmt.Println("Subtitles disabled")
+		util.Info("Subtitles disabled")
 	} else {
 		if err := SetSubtitleTrack(socketPath, selected); err != nil {
-			fmt.Printf("Error setting subtitle track: %v\n", err)
+			util.Warnf("Error setting subtitle track: %v\n", err)
 		} else {
-			fmt.Printf("Subtitle track changed to %d\n", selected)
+			util.Infof("Subtitle track changed to %d\n", selected)
 		}
 	}
 }

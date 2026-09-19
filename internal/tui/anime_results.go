@@ -226,17 +226,7 @@ type animeResultsRunner func(tea.Model) (tea.Model, error)
 
 // SelectAnime opens the result screen and returns the chosen anime.
 func SelectAnime(animes []*models.Anime) (*models.Anime, error) {
-	return selectAnimeWithRunner(animes, func(model tea.Model) (tea.Model, error) {
-		var final tea.Model
-		err := RunClean(func() error {
-			return busy(func() error {
-				var runErr error
-				final, runErr = NewProgram(model).Run()
-				return runErr
-			})
-		})
-		return final, err
-	})
+	return selectAnimeWithRunner(animes, runScreen)
 }
 
 // selectAnimeWithRunner isolates terminal execution for deterministic tests.

@@ -28,6 +28,9 @@ import (
 // On Windows consoles without VT processing, ANSI is skipped (only a bare
 // carriage return) so classic cmd.exe never shows raw codes like ←[?25h.
 func ResetTerminal() {
+	if ScreensActive() {
+		return
+	}
 	// Reset DECCKM (normal cursor keys) + reset keypad numeric mode + show cursor
 	// These match the exact sequences tcell's ExitKeypad should send but
 	// sometimes fails to:
@@ -56,6 +59,7 @@ func ResetTerminal() {
 // Find is a drop-in replacement for fuzzyfinder.Find that resets the
 // terminal's cursor key mode after the finder exits.
 func Find[T any](slice []T, itemFunc func(i int) string, opts ...fuzzyfinder.Option) (int, error) {
+	CloseScreens()
 	idx, err := fuzzyfinder.Find(slice, itemFunc, opts...)
 	ResetTerminal()
 	return idx, err

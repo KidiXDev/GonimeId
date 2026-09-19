@@ -61,6 +61,7 @@ func RestoreTerminalState(w io.Writer) {
 // RestoreTerminalStdout restores the terminal on stdout. Convenience wrapper for
 // the exit-cleanup path.
 func RestoreTerminalStdout() {
+	CloseScreens()
 	RestoreTerminalState(os.Stdout)
 }
 

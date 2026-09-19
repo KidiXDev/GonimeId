@@ -333,17 +333,7 @@ type pickRunner func(tea.Model) (tea.Model, error)
 
 // Pick opens a styled fuzzy picker and returns the chosen item index.
 func Pick(items []PickItem, opts PickOptions) (int, error) {
-	return pickWithRunner(items, opts, func(model tea.Model) (tea.Model, error) {
-		var final tea.Model
-		err := RunClean(func() error {
-			return busy(func() error {
-				var runErr error
-				final, runErr = NewProgram(model).Run()
-				return runErr
-			})
-		})
-		return final, err
-	})
+	return pickWithRunner(items, opts, runScreen)
 }
 
 // PickLabels is a convenience for simple one-line menus (download options,

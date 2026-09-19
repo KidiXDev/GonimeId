@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 	"sync"
@@ -206,6 +205,6 @@ func FindEpisodeByNumber(episodes []models.Episode, num int) (episodeURL, episod
 			return ep.URL, ep.Number, num, nil
 		}
 	}
-	log.Printf("Warning: Episode number %d not found. Re-selecting.", num)
+	util.Warnf("Warning: Episode number %d not found. Re-selecting.", num)
 	return SelectEpisodeWithFuzzy(episodes)
 }

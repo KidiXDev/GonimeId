@@ -4,11 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"strconv"
 	"sync"
 
-	"charm.land/huh/v2"
 	"github.com/KidiXDev/GonimeId/internal/api"
 	"github.com/KidiXDev/GonimeId/internal/api/providers"
 	"github.com/KidiXDev/GonimeId/internal/models"
@@ -24,11 +22,10 @@ func printEpisodeNotFoundMsg() {
 }
 
 func HandleSeries(ctx context.Context, anime *models.Anime, episodes []models.Episode, totalEpisodes int, discordEnabled bool) error {
-	tui.ResetTerminal()
 	if anime.IsTV() {
-		fmt.Printf("The selected TV show has %d episodes.\n", totalEpisodes)
+		util.Infof("The selected TV show has %d episodes.\n", totalEpisodes)
 	} else {
-		fmt.Printf("The selected anime is a series with %d episodes.\n", totalEpisodes)
+		util.Infof("The selected anime is a series with %d episodes.\n", totalEpisodes)
 	}
 	animeMutex := sync.Mutex{}
 	isPaused := false
@@ -67,7 +64,7 @@ func HandleSeries(ctx context.Context, anime *models.Anime, episodes []models.Ep
 
 		// Check if user quit during video playback
 		if errors.Is(err, player.ErrUserQuit) {
-			log.Println("Quitting application as per user request.")
+			util.Info("Quitting application as per user request.")
 			break
 		}
 
@@ -81,7 +78,7 @@ func HandleSeries(ctx context.Context, anime *models.Anime, episodes []models.Ep
 				}
 				// Keep the previous selection: committing the zero values of a
 				// failed selection made the loop replay a fabricated empty episode.
-				log.Printf("Error selecting episode: %v", selErr)
+				util.Warnf("Error selecting episode: %v", selErr)
 				continue
 			}
 			selectedEpisodeURL, episodeNumberStr, selectedEpisodeNum = newURL, newNumStr, newNum
@@ -92,7 +89,9 @@ func HandleSeries(ctx context.Context, anime *models.Anime, episodes []models.Ep
 		if errors.Is(err, player.ErrChangeAnime) {
 			newAnime, newEpisodes, err := ChangeAnimeLocal()
 			if err != nil {
-				log.Printf("Error changing anime: %v", err)
+				if !tui.IsCancelled(err) {
+					util.Warnf("Error changing anime: %v", err)
+				}
 				continue // Stay with current anime if change fails
 			}
 
@@ -108,7 +107,7 @@ func HandleSeries(ctx context.Context, anime *models.Anime, episodes []models.Ep
 
 			if !series {
 				// If new anime is a movie, handle it differently
-				log.Println("Switched to a movie/OVA, handling as single episode.")
+				util.Info("Switched to a movie/OVA, handling as single episode.")
 				if err := HandleMovie(ctx, anime, episodes, discordEnabled); err != nil {
 					if errors.Is(err, player.ErrBackToAnimeSelection) {
 						return err
@@ -122,23 +121,23 @@ func HandleSeries(ctx context.Context, anime *models.Anime, episodes []models.Ep
 			// anime), so bounce to anime selection instead of committing zeros.
 			newURL, newNumStr, newNum, selErr := SelectInitialEpisode(episodes)
 			if selErr != nil {
-				log.Printf("Error selecting episode for new anime: %v", selErr)
+				util.Warnf("Error selecting episode for new anime: %v", selErr)
 				return player.ErrBackToAnimeSelection
 			}
 			selectedEpisodeURL, episodeNumberStr, selectedEpisodeNum = newURL, newNumStr, newNum
 
-			fmt.Printf("Switched to anime: %s with %d episodes.\n", anime.Name, totalEpisodes)
+			util.Infof("Switched to anime: %s with %d episodes.\n", anime.Name, totalEpisodes)
 			continue // Skip normal navigation and start playing the new anime
 		}
 
 		// Handle other errors
 		if err != nil {
-			log.Printf("Error during episode playback: %v", err)
+			util.Warnf("Error during episode playback: %v", err)
 		}
 
 		userInput := GetUserInput()
 		if userInput == "q" || userInput == "quit" {
-			log.Println("Quitting application as per user request.")
+			util.Info("Quitting application as per user request.")
 			break
 		}
 
@@ -146,7 +145,9 @@ func HandleSeries(ctx context.Context, anime *models.Anime, episodes []models.Ep
 		if userInput == "c" || userInput == "back" {
 			newAnime, newEpisodes, err := ChangeAnimeLocal()
 			if err != nil {
-				log.Printf("Error changing anime: %v", err)
+				if !tui.IsCancelled(err) {
+					util.Warnf("Error changing anime: %v", err)
+				}
 				continue // Stay with current anime if change fails
 			}
 
@@ -162,7 +163,7 @@ func HandleSeries(ctx context.Context, anime *models.Anime, episodes []models.Ep
 
 			if !series {
 				// If new anime is a movie, handle it differently
-				log.Println("Switched to a movie/OVA, handling as single episode.")
+				util.Info("Switched to a movie/OVA, handling as single episode.")
 				if err := HandleMovie(ctx, anime, episodes, discordEnabled); err != nil {
 					if errors.Is(err, player.ErrBackToAnimeSelection) {
 						return err
@@ -176,12 +177,12 @@ func HandleSeries(ctx context.Context, anime *models.Anime, episodes []models.Ep
 			// anime), so bounce to anime selection instead of committing zeros.
 			newURL, newNumStr, newNum, selErr := SelectInitialEpisode(episodes)
 			if selErr != nil {
-				log.Printf("Error selecting episode for new anime: %v", selErr)
+				util.Warnf("Error selecting episode for new anime: %v", selErr)
 				return player.ErrBackToAnimeSelection
 			}
 			selectedEpisodeURL, episodeNumberStr, selectedEpisodeNum = newURL, newNumStr, newNum
 
-			fmt.Printf("Switched to anime: %s with %d episodes.\n", anime.Name, totalEpisodes)
+			util.Infof("Switched to anime: %s with %d episodes.\n", anime.Name, totalEpisodes)
 			continue // Skip normal navigation and start playing the new anime
 		}
 
@@ -192,7 +193,7 @@ func HandleSeries(ctx context.Context, anime *models.Anime, episodes []models.Ep
 				// Back or failure: keep the current (valid) selection instead
 				// of committing the zero values of a failed selection.
 				if !errors.Is(selErr, player.ErrBackRequested) {
-					log.Printf("Error selecting episode: %v", selErr)
+					util.Warnf("Error selecting episode: %v", selErr)
 				}
 				continue
 			}
@@ -209,7 +210,7 @@ func HandleSeries(ctx context.Context, anime *models.Anime, episodes []models.Ep
 		)
 		if newURL == "" {
 			// Navigation failed (e.g. fuzzy finder error) — retry selection
-			log.Println("Episode navigation failed, please select again.")
+			util.Info("Episode navigation failed, please select again.")
 			continue
 		}
 		selectedEpisodeURL, episodeNumberStr, selectedEpisodeNum = newURL, newNumStr, newNum
@@ -275,7 +276,7 @@ func handleUserNavigation(input string, episodes []models.Episode, currentNum, t
 		url, numStr, epNum, err = FindEpisodeByNumber(episodes, newNum)
 	}
 	if err != nil {
-		log.Printf("Navigation error: %v", err)
+		util.Warnf("Navigation error: %v", err)
 		return "", "", currentNum
 	}
 	return url, numStr, epNum
@@ -295,7 +296,7 @@ func CheckIfSeries(url string) (isSeries bool, episodeCount int) {
 	series, totalEpisodes, err := api.IsSeries(url)
 	if err != nil {
 		// Instead of killing the app, assume series unknown -> treat as single episode (movie)
-		log.Printf("Error checking if the anime is a series: %v", util.ErrorHandler(err))
+		util.Warnf("Error checking if the anime is a series: %v", util.ErrorHandler(err))
 		return false, 1
 	}
 	return series, totalEpisodes
@@ -305,7 +306,7 @@ func CheckIfSeries(url string) (isSeries bool, episodeCount int) {
 func CheckIfSeriesEnhanced(anime *models.Anime) (isSeries bool, episodeCount int) {
 	series, totalEpisodes, err := api.IsSeriesEnhanced(anime)
 	if err != nil {
-		log.Printf("Error checking if the anime is a series: %v", util.ErrorHandler(err))
+		util.Warnf("Error checking if the anime is a series: %v", util.ErrorHandler(err))
 		return false, 1
 	}
 	return series, totalEpisodes
@@ -313,43 +314,61 @@ func CheckIfSeriesEnhanced(anime *models.Anime) (isSeries bool, episodeCount int
 
 // ChangeAnimeLocal allows the user to search for and select a new anime (local implementation to avoid circular imports)
 func ChangeAnimeLocal() (*models.Anime, []models.Episode, error) {
+	return changeAnimeWith(tui.Prompt, api.SearchAnimeEnhanced, providers.FetchEpisodes)
+}
+
+func changeAnimeWith(
+	prompt func(tui.PromptOptions) (string, error),
+	search func(string, string) (*models.Anime, error),
+	fetch func(context.Context, *models.Anime) ([]models.Episode, error),
+) (*models.Anime, []models.Episode, error) {
 	const maxRetries = 3
 
-	for i := range maxRetries {
-		var animeName string
-
-		prompt := huh.NewInput().
-			Title("Change Anime").
-			Description("Enter the name of the anime you want to watch:").
-			Value(&animeName).
-			Validate(func(v string) error {
-				if len(v) < 2 {
-					return fmt.Errorf("anime name must be at least 2 characters")
-				}
-				return nil
-			})
-
-		if err := tui.RunClean(prompt.Run); err != nil {
+	for i := 0; i < maxRetries; {
+		animeName, err := prompt(tui.PromptOptions{
+			Breadcrumb:  "Player › Change anime",
+			Title:       "Change Anime",
+			Placeholder: "Enter the name of the anime you want to watch",
+			MinLength:   2,
+		})
+		if err != nil {
 			return nil, nil, err
 		}
 
 		// Use the enhanced API to search for anime
-		anime, err := api.SearchAnimeEnhanced(animeName, "")
+		anime, err := search(animeName, "")
+		if errors.Is(err, api.ErrBackToSearch) {
+			continue
+		}
+		if tui.IsCancelled(err) {
+			return nil, nil, err
+		}
 		if err != nil || anime == nil {
 			if i < maxRetries-1 {
 				util.Errorf("No anime found with the name: %s", animeName)
 				util.Infof("Please try again with a different search term. (Attempt %d/%d)", i+2, maxRetries)
+				i++
 				continue
 			}
 			return nil, nil, fmt.Errorf("failed to find anime after %d attempts", maxRetries)
 		}
 
 		// Get episodes for the new anime via the Model B registry.
-		episodes, err := providers.FetchEpisodes(context.Background(), anime)
+		episodes, err := fetch(context.Background(), anime)
+		if errors.Is(err, api.ErrBackToSearch) {
+			continue
+		}
+		if tui.IsCancelled(err) {
+			return nil, nil, err
+		}
+		if err == nil && len(episodes) == 0 {
+			err = fmt.Errorf("no episodes found for %s", anime.Name)
+		}
 		if err != nil {
 			if i < maxRetries-1 {
 				util.Errorf("Failed to get episodes for: %s", anime.Name)
 				util.Infof("Please try searching for a different anime. (Attempt %d/%d)", i+2, maxRetries)
+				i++
 				continue
 			}
 			return nil, nil, fmt.Errorf("failed to get episodes after %d attempts", maxRetries)

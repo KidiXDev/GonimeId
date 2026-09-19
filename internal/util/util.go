@@ -379,6 +379,7 @@ func RegisterCleanup(fn func()) {
 
 // RunCleanup runs all registered cleanup functions
 func RunCleanup() {
+	tui.CloseScreens()
 	cleanupMu.Lock()
 	funcs := make([]func(), len(cleanupFuncs))
 	copy(funcs, cleanupFuncs)

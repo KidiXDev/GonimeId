@@ -105,7 +105,7 @@ func (s *Shell) Render(body, footer string) string {
 	return lipgloss.JoinVertical(lipgloss.Left,
 		fitBlock(header, width, 1),
 		separator,
-		fitBlock(body, width, height),
+		lipgloss.NewStyle().Height(height).Render(fitBlock(body, width, height)),
 		separator,
 		fitBlock(s.Theme.Footer.Render(footer), width, 1),
 	)
