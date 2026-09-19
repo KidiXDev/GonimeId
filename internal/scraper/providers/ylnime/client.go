@@ -199,7 +199,7 @@ func (c *Client) Qualities(ctx context.Context, episodeURL string) ([]string, er
 	return out, nil
 }
 
-func (c *Client) GetEpisodeStreamURL(ctx context.Context, episodeURL, quality string) (string, map[string]string, error) {
+func (c *Client) GetEpisodeStreamURL(ctx context.Context, episodeURL, quality string) (streamURL string, metadata map[string]string, err error) {
 	u, err := url.Parse(episodeURL)
 	if err != nil {
 		return "", nil, netx.NewParserError(sourceLabel, "stream", "bad episode URL", err)

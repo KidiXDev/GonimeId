@@ -120,7 +120,7 @@ func SearchAnimeEnhanced(name, src string) (*models.Anime, error) {
 
 // SearchAnimeEnhancedWithResults returns the selected anime and the result set
 // it came from so an interactive session can reopen the list without refetching.
-func SearchAnimeEnhancedWithResults(name, src string) (*models.Anime, []*models.Anime, error) {
+func SearchAnimeEnhancedWithResults(name, src string) (selected *models.Anime, results []*models.Anime, err error) {
 	return searchAnimeEnhancedWithResults(name, src, searchFetchFn, tui.SelectAnime, enrichAnimeData)
 }
 
