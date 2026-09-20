@@ -34,6 +34,7 @@ const (
 var (
 	episodeIDRe = regexp.MustCompile(`^play_eps_(\d+)$`)
 	sourceSrcRe = regexp.MustCompile(`<source[^>]+src=["']([^"']+)["']`)
+	streamAPIRe = regexp.MustCompile(`STREAM_URL_API\s*=\s*["']([^"']+)["']`)
 	qualityRe   = regexp.MustCompile(`(\d{3,4})`)
 	// titleNoiseRe drops the site's "Sub Indo" and ": Episode 1 – 28 (End)" suffixes.
 	titleNoiseRe = regexp.MustCompile(`(?i)\s*(?:sub\s+indo|subtitle\s+indonesia)?\s*(?::\s*episode.*)?$`)
@@ -316,12 +317,36 @@ func (c *NimegamiClient) episodeStreams(ctx context.Context, episodeURL string) 
 	return append([]streamEntry(nil), entries...), nil
 }
 
-// resolveEmbed fetches a berkasdrive streaming page, pulls the <source> file
-// out, strips its unescaped `?filename=` query and probes it.
+// resolveEmbed fetches a streaming page, resolves its media URL and probes it.
 func (c *NimegamiClient) resolveEmbed(ctx context.Context, embedURL string) (string, error) {
 	body, err := c.fetch(ctx, embedURL, "embed")
 	if err != nil {
 		return "", err
+	}
+	if m := streamAPIRe.FindSubmatch(body); m != nil {
+		base, err := url.Parse(embedURL)
+		if err != nil {
+			return "", netx.NewParserError(sourceLabel, "embed", "bad streaming page URL", err)
+		}
+		endpoint, err := url.Parse(string(m[1]))
+		if err != nil {
+			return "", netx.NewParserError(sourceLabel, "embed", "bad stream API URL", err)
+		}
+		apiBody, err := c.fetch(ctx, base.ResolveReference(endpoint).String(), "stream API")
+		if err != nil {
+			return "", err
+		}
+		var payload struct {
+			OK  bool   `json:"ok"`
+			URL string `json:"url"`
+		}
+		if err := json.Unmarshal(apiBody, &payload); err != nil || !payload.OK || payload.URL == "" {
+			return "", netx.NewParserError(sourceLabel, "stream API", "no media URL in response", err)
+		}
+		if !c.playable(ctx, payload.URL) {
+			return "", netx.NewParserError(sourceLabel, "stream API", "file not served from here", nil)
+		}
+		return payload.URL, nil
 	}
 	m := sourceSrcRe.FindSubmatch(body)
 	if m == nil {

@@ -155,6 +155,30 @@ func TestGetEpisodeStreamURL(t *testing.T) {
 	}
 }
 
+func TestResolveEmbed_StreamURLAPI(t *testing.T) {
+	t.Parallel()
+	var srv *httptest.Server
+	mux := http.NewServeMux()
+	mux.HandleFunc("/streaming/new", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("action") == "stream-url" {
+			_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "url": srv.URL + "/media/video.mp4?token=kept"})
+			return
+		}
+		_, _ = w.Write([]byte(`<script>const STREAM_URL_API = "/streaming/new?action=stream-url&id=new";</script>`))
+	})
+	mux.HandleFunc("/media/video.mp4", func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "bytes=0-0", r.Header.Get("Range"))
+		require.Equal(t, "kept", r.URL.Query().Get("token"))
+		w.WriteHeader(http.StatusPartialContent)
+	})
+	srv = httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	got, err := NewClientForTest(srv.URL).resolveEmbed(context.Background(), srv.URL+"/streaming/new?name=video.mp4")
+	require.NoError(t, err)
+	assert.Equal(t, srv.URL+"/media/video.mp4?token=kept", got)
+}
+
 func TestGetEpisodeStreamURL_BadURL(t *testing.T) {
 	t.Parallel()
 	srv, c := newServer(t)
