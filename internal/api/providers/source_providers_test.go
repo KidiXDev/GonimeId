@@ -60,6 +60,7 @@ func TestIDSubProviders_DescribeAndScraper(t *testing.T) {
 		{source.Nimegami, scraper.NimegamiType, 30, []string{"nimegami"}},
 		{source.Ylnime, scraper.YlnimeType, 40, []string{"ylnime.com"}},
 		{source.Moenime, scraper.MoenimeType, 50, []string{"moenime.com", "moeclip.com"}},
+		{source.Astronime, scraper.AstronimeType, 60, []string{"astronime.id"}},
 	}
 	for _, tt := range tests {
 		t.Run(string(tt.kind), func(t *testing.T) {
@@ -90,7 +91,7 @@ func TestIDSubProviders_DescribeAndScraper(t *testing.T) {
 // Model B registry with every live source.
 func TestSourceRegistry_LiveSourcesRegistered(t *testing.T) {
 	t.Parallel()
-	for _, kind := range []source.SourceKind{source.Otakudesu, source.Samehadaku, source.Nimegami, source.Ylnime, source.Moenime} {
+	for _, kind := range []source.SourceKind{source.Otakudesu, source.Samehadaku, source.Nimegami, source.Ylnime, source.Moenime, source.Astronime} {
 		s, ok := source.Registered(kind)
 		require.True(t, ok, "source %s must be registered", kind)
 		assert.Equal(t, kind, s.Describe().Kind)
@@ -120,6 +121,7 @@ func TestResolve_LiveRegistry(t *testing.T) {
 		{"ylnime episode URL", &models.Anime{URL: "https://ylnime.com/?series=one-turn-kill-sub-indo%2F&episode=iotkn-episode-1-sub-indo%2F"}, source.Ylnime},
 		{"moenime anime URL", &models.Anime{URL: "https://moenime.com/saijo-no-osewa-sub-indo/#12"}, source.Moenime},
 		{"moeclip episode URL", &models.Anime{URL: "https://moeclip.com/saijo-no-osewa/01/"}, source.Moenime},
+		{"astronime episode URL", &models.Anime{URL: "https://astronime.id/toumei-na-yoru-ni-kakeru-kimi-to-me-ni-mienai-koi-wo-shita-episode-01/"}, source.Astronime},
 		{"unknown", &models.Anime{Name: "X", URL: "https://example.com/v"}, source.Unknown},
 	}
 	for _, tt := range tests {
@@ -150,6 +152,7 @@ func TestResolveURL_LiveRegistry(t *testing.T) {
 		{"https://ylnime.com/?series=one-turn-kill-sub-indo%2F&episode=iotkn-episode-1-sub-indo%2F", source.Ylnime},
 		{"https://moenime.com/saijo-no-osewa-sub-indo/#12", source.Moenime},
 		{"https://moeclip.com/saijo-no-osewa/01/", source.Moenime},
+		{"https://astronime.id/toumei-na-yoru-ni-kakeru-kimi-to-me-ni-mienai-koi-wo-shita-episode-01/", source.Astronime},
 		// Removed hosts resolve to nothing rather than to a guess.
 		{"https://animefire.plus/ep/naruto-1", source.Unknown},
 		{"https://example.com/video", source.Unknown},
@@ -195,7 +198,7 @@ func TestPickQuality_NoTerminalKeepsDefault(t *testing.T) {
 
 func TestPreselectQuality_RequiresChoiceForEverySource(t *testing.T) {
 	// Not parallel: terminal detection reads process-wide stdin.
-	for _, name := range []string{"Otakudesu", "Samehadaku", "Nimegami", "YLnime", "Moenime"} {
+	for _, name := range []string{"Otakudesu", "Samehadaku", "Nimegami", "YLnime", "Moenime", "Astronime"} {
 		t.Run(name, func(t *testing.T) {
 			_, err := PreselectQuality(context.Background(), &models.Anime{Source: name}, &models.Episode{URL: "https://example.com/episode"}, "720p")
 			require.ErrorContains(t, err, "interactive terminal", "an existing or CLI quality must not bypass this source's picker")

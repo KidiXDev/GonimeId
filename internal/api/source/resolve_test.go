@@ -175,6 +175,10 @@ func TestScraperTypeFor(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, scraper.MoenimeType, st)
 
+	st, ok = ScraperTypeFor(Astronime)
+	require.True(t, ok)
+	assert.Equal(t, scraper.AstronimeType, st)
+
 	_, ok = ScraperTypeFor(AniDB)
 	assert.False(t, ok, "fake test kinds are not mapped to a scraper")
 

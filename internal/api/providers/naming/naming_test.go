@@ -38,6 +38,7 @@ func TestCleanTitle(t *testing.T) {
 		{"[Indonesian] Naruto [Otakudesu]", "Naruto"},
 		{"Naruto [Samehadaku]", "Naruto"},
 		{"Naruto [Moenime]", "Naruto"},
+		{"Naruto [Astronime]", "Naruto"},
 		{"Naruto [Movie]", "Naruto"},
 		{"Naruto", "Naruto"},
 		// If only tags, return original

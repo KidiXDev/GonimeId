@@ -12,6 +12,7 @@ import (
 	"fmt"
 
 	"github.com/KidiXDev/GonimeId/internal/models"
+	"github.com/KidiXDev/GonimeId/internal/scraper/providers/astronime"
 	"github.com/KidiXDev/GonimeId/internal/scraper/providers/moenime"
 	"github.com/KidiXDev/GonimeId/internal/scraper/providers/nimegami"
 	"github.com/KidiXDev/GonimeId/internal/scraper/providers/otakudesu"
@@ -28,6 +29,7 @@ const (
 	NimegamiType                      // nimegami.id — Indonesian-subtitled
 	YlnimeType                        // ylnime.com — Indonesian-subtitled
 	MoenimeType                       // moenime.com / moeclip.com — Indonesian-subtitled
+	AstronimeType                     // astronime.id / abyssplayer.com — Indonesian-subtitled
 )
 
 // ContextualScraper is the optional capability (Model C: discovered by type
@@ -69,6 +71,8 @@ func NewAdapter(t ScraperType) (UnifiedScraper, error) {
 		return &ctxAdapter{client: ylnime.NewYlnimeClient(), typ: YlnimeType}, nil
 	case MoenimeType:
 		return &ctxAdapter{client: moenime.NewMoenimeClient(), typ: MoenimeType}, nil
+	case AstronimeType:
+		return &ctxAdapter{client: astronime.NewAstronimeClient(), typ: AstronimeType}, nil
 	default:
 		return nil, fmt.Errorf("no adapter for scraper type %v", t)
 	}
@@ -88,6 +92,8 @@ func scraperDisplayName(scraperType ScraperType) string {
 		return "YLnime"
 	case MoenimeType:
 		return "Moenime"
+	case AstronimeType:
+		return "Astronime"
 	default:
 		return "Unknown"
 	}
