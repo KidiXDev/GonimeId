@@ -30,10 +30,15 @@ const (
 </ul></div>`
 	episodeHTML = `<div id="server"><ul>
 <li><div id="player-option-1" class="east_player_option" data-post="37909" data-nume="1" data-type="schtml"><span>Blogspot</span></div></li>
-<li><div id="player-option-5" class="east_player_option" data-post="37909" data-nume="5" data-type="schtml"><span>Vidhide 720p</span></div></li>
-<li><div id="player-option-10" class="east_player_option" data-post="37909" data-nume="10" data-type="schtml"><span>Pixel 480p</span></div></li>
-<li><div id="player-option-11" class="east_player_option" data-post="37909" data-nume="11" data-type="schtml"><span>Pixel 720p</span></div></li>
-<li><div id="player-option-12" class="east_player_option" data-post="37909" data-nume="12" data-type="schtml"><span>Pixel 1080p</span></div></li>
+<li><div id="player-option-3" class="east_player_option" data-post="37909" data-nume="3" data-type="schtml"><span>Wibufile 480p</span></div></li>
+<li><div id="player-option-4" class="east_player_option" data-post="37909" data-nume="4" data-type="schtml"><span>Wibufile 720p</span></div></li>
+<li><div id="player-option-5" class="east_player_option" data-post="37909" data-nume="5" data-type="schtml"><span>Wibufile 1080p</span></div></li>
+</ul></div>
+<div class="download-eps"><p><b>MKV</b></p><ul>
+<li><strong>360p</strong><a href="https://pixeldrain.com/u/Low360">Pixeldrain</a></li>
+<li><strong>480p</strong><a href="https://pixeldrain.com/u/Low480">Pixeldrain</a></li>
+<li><strong>720p</strong><a href="https://pixeldrain.com/u/UidvB5qB">Pixeldrain</a></li>
+<li><strong>1080p</strong><a href="https://pixeldrain.com/u/Gone">Pixeldrain</a></li>
 </ul></div>`
 )
 
@@ -59,6 +64,18 @@ func newServer(t *testing.T) (*httptest.Server, *SamehadakuClient) {
 		w.WriteHeader(http.StatusPartialContent)
 		_, _ = w.Write([]byte{0})
 	})
+	mux.HandleFunc("/embed/480", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`<script>var player = {url: "` + srv.URL + `/api/wibufile?id=480"};</script>`))
+	})
+	mux.HandleFunc("/api/wibufile", func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, srv.URL+"/embed/480", r.Header.Get("Referer"))
+		_, _ = w.Write([]byte(`{"status":"ok","sources":[{"file":"` + srv.URL + `/video/480.mp4","type":"video/mp4","label":"Original"}]}`))
+	})
+	mux.HandleFunc("/video/", func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "bytes=0-0", r.Header.Get("Range"), "probe must ask for one byte only")
+		w.WriteHeader(http.StatusPartialContent)
+		_, _ = w.Write([]byte{0})
+	})
 	mux.HandleFunc("/wp-admin/admin-ajax.php", func(w http.ResponseWriter, r *http.Request) {
 		require.NoError(t, r.ParseForm())
 		require.Equal(t, "player_ajax", r.Form.Get("action"))
@@ -67,12 +84,12 @@ func newServer(t *testing.T) (*httptest.Server, *SamehadakuClient) {
 		switch r.Form.Get("nume") {
 		case "1":
 			src = "https://www.blogger.com/video.g?token=AD6v5dzYzfD2"
-		case "10":
-			src = "https://pixeldrain.com/u/Low480"
-		case "11":
-			src = "https://pixeldrain.com/u/UidvB5qB"
-		case "12":
-			src = "https://pixeldrain.com/u/Gone" // listed, but the file was removed
+		case "3":
+			src = srv.URL + "/embed/480"
+		case "4":
+			src = srv.URL + "/video/720.mp4"
+		case "5":
+			src = srv.URL + "/video/1080.mp4"
 		default:
 			src = "https://krakenfiles.com/embed-video/x"
 		}
@@ -125,9 +142,9 @@ func TestGetEpisodeStreamURL(t *testing.T) {
 	tests := []struct {
 		name, quality, want string
 	}{
-		{"best skips the removed 1080p file and takes 720p", "best", srv.URL + "/api/file/UidvB5qB"},
-		{"explicit 480p", "480p", srv.URL + "/api/file/Low480"},
-		{"explicit 1080p is gone, falls back to highest live", "1080p", srv.URL + "/api/file/UidvB5qB"},
+		{"best uses the site's full HD player", "best", srv.URL + "/video/1080.mp4"},
+		{"embedded 480p resolves through the Wibufile API", "480p", srv.URL + "/video/480.mp4"},
+		{"explicit 1080p uses the site's full HD player", "1080p", srv.URL + "/video/1080.mp4"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -145,7 +162,7 @@ func TestQualities(t *testing.T) {
 	srv, c := newServer(t)
 	got, err := c.Qualities(context.Background(), srv.URL+"/naruto-kecil-episode-220/")
 	require.NoError(t, err)
-	assert.Equal(t, []string{"1080p", "720p", "480p"}, got, "Pixeldrain heights only, highest first; Blogspot and Vidhide excluded")
+	assert.Equal(t, []string{"1080p", "720p", "480p", "360p"}, got, "available player and fallback heights, highest first")
 }
 
 // Blogspot is the fallback when no Pixeldrain server is listed.

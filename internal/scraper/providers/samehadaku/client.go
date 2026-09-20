@@ -2,7 +2,9 @@ package samehadaku
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"net/http"
 	"net/url"
@@ -23,17 +25,19 @@ const (
 	// TestHostIsPinned instead of silently scraping the wrong site.
 	samehadakuBase = "https://v2.samehadaku.how"
 	pixeldrainBase = "https://pixeldrain.com"
+	wibufileBase   = "https://api.wibufile.com"
 	sourceLabel    = "Samehadaku"
 	maxBodyBytes   = 8 << 20
 )
 
 var (
-	episodeNumRe = regexp.MustCompile(`(?i)episode[- ](\d+)`)
-	iframeSrcRe  = regexp.MustCompile(`<iframe[^>]+src="([^"]+)"`)
-	pixeldrainRe = regexp.MustCompile(`pixeldrain\.com/(?:u|api/file)/([A-Za-z0-9]+)`)
-	bloggerRe    = regexp.MustCompile(`https://www\.blogger\.com/video\.g\?token=[A-Za-z0-9_-]+`)
-	qualityRe    = regexp.MustCompile(`(\d{3,4})`)
-	subIndoRe    = regexp.MustCompile(`(?i)\s*(?:subtitle|sub)\s+indo(?:nesia)?\s*$`)
+	episodeNumRe  = regexp.MustCompile(`(?i)episode[- ](\d+)`)
+	iframeSrcRe   = regexp.MustCompile(`<iframe[^>]+src="([^"]+)"`)
+	pixeldrainRe  = regexp.MustCompile(`pixeldrain\.com/(?:u|api/file)/([A-Za-z0-9]+)`)
+	bloggerRe     = regexp.MustCompile(`https://www\.blogger\.com/video\.g\?token=[A-Za-z0-9_-]+`)
+	wibufileAPIRe = regexp.MustCompile(`(?i)\burl\s*:\s*["']([^"']+)["']`)
+	qualityRe     = regexp.MustCompile(`(\d{3,4})`)
+	subIndoRe     = regexp.MustCompile(`(?i)\s*(?:subtitle|sub)\s+indo(?:nesia)?\s*$`)
 )
 
 // SamehadakuClient handles interactions with samehadaku.
@@ -42,13 +46,14 @@ type SamehadakuClient struct {
 	prober     *http.Client // plain net/http: file hosts (pixeldrain, googlevideo) omit ALPN and break surf's h2 path
 	baseURL    string
 	pixeldrain string // file host; overridden in tests so the probe stays offline
+	wibufile   string // API host; overridden in tests so embed resolution stays offline
 	maxRetries int
 	retryDelay time.Duration
 }
 
 // NewSamehadakuClient performs no network I/O: it runs under sync.Once in the adapter.
 func NewSamehadakuClient() *SamehadakuClient {
-	return &SamehadakuClient{client: util.NewFastClient(), prober: newProber(), baseURL: samehadakuBase, pixeldrain: pixeldrainBase, maxRetries: 2, retryDelay: 300 * time.Millisecond}
+	return &SamehadakuClient{client: util.NewFastClient(), prober: newProber(), baseURL: samehadakuBase, pixeldrain: pixeldrainBase, wibufile: wibufileBase, maxRetries: 2, retryDelay: 300 * time.Millisecond}
 }
 
 // NewClientForTest points the client at a test server with retries disabled.
@@ -56,6 +61,7 @@ func NewClientForTest(serverURL string) *SamehadakuClient {
 	c := NewSamehadakuClient()
 	c.baseURL = strings.TrimSuffix(serverURL, "/")
 	c.pixeldrain = c.baseURL
+	c.wibufile = c.baseURL
 	c.maxRetries, c.retryDelay = 0, 0
 	c.prober = &http.Client{Timeout: 5 * time.Second} // the SSRF guard rejects loopback
 	return c
@@ -214,12 +220,12 @@ func (c *SamehadakuClient) GetAnimeEpisodes(ctx context.Context, animeURL string
 // server is one entry of the episode page's player list.
 type server struct {
 	post, nume, typ, label string
+	direct                 string
 	height                 int
 }
 
-// Qualities lists the resolutions the episode's Pixeldrain servers offer,
-// highest first ("1080p", "720p", …). Blogspot carries no label and is left
-// out; it remains the fallback when a picked height is gone.
+// Qualities lists the resolutions the episode's players offer, highest first
+// ("1080p", "720p", …). Blogspot carries no label and is left out.
 func (c *SamehadakuClient) Qualities(ctx context.Context, episodeURL string) ([]string, error) {
 	doc, err := c.document(ctx, episodeURL, "episode")
 	if err != nil {
@@ -242,8 +248,8 @@ func (c *SamehadakuClient) Qualities(ctx context.Context, episodeURL string) ([]
 }
 
 // GetEpisodeStreamURL resolves an episode to a direct file or Blogger URL.
-// Pixeldrain servers of the requested height go first, then the rest by
-// height descending, then Blogspot (whose quality the player picks itself).
+// The site's Wibufile player goes first at each height; download mirrors and
+// Blogspot remain fallbacks.
 func (c *SamehadakuClient) GetEpisodeStreamURL(ctx context.Context, episodeURL, quality string) (streamURL string, metadata map[string]string, err error) {
 	doc, err := c.document(ctx, episodeURL, "episode")
 	if err != nil {
@@ -263,14 +269,25 @@ func (c *SamehadakuClient) GetEpisodeStreamURL(ctx context.Context, episodeURL, 
 
 	var lastErr error
 	for _, s := range servers {
-		body, err := c.fetch(ctx, c.baseURL+"/wp-admin/admin-ajax.php", "player", url.Values{
-			"action": {"player_ajax"}, "post": {s.post}, "nume": {s.nume}, "type": {s.typ},
-		})
-		if err != nil {
-			lastErr = err
-			continue
+		u := c.resolveEmbed(s.direct)
+		if u == "" {
+			body, err := c.fetch(ctx, c.baseURL+"/wp-admin/admin-ajax.php", "player", url.Values{
+				"action": {"player_ajax"}, "post": {s.post}, "nume": {s.nume}, "type": {s.typ},
+			})
+			if err != nil {
+				lastErr = err
+				continue
+			}
+			embed := iframeSrc(string(body))
+			u = c.resolveEmbed(embed)
+			if u == "" {
+				u, err = c.resolveWibufile(ctx, embed)
+				if err != nil {
+					lastErr = err
+					continue
+				}
+			}
 		}
-		u := c.resolveEmbed(iframeSrc(string(body)))
 		if u == "" || (!strings.Contains(u, "blogger.com") && !c.playable(ctx, u)) {
 			continue // unknown host, or a removed file: try the next server
 		}
@@ -298,13 +315,13 @@ func (c *SamehadakuClient) playable(ctx context.Context, rawURL string) bool {
 	return resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusPartialContent
 }
 
-// parseServers keeps only the hosts resolveEmbed understands.
+// parseServers keeps only the hosts this provider understands.
 func parseServers(doc *goquery.Document) []server {
 	var out []server
 	doc.Find("#server .east_player_option").Each(func(_ int, d *goquery.Selection) {
 		label := strings.TrimSpace(d.Text())
 		lower := strings.ToLower(label)
-		if !strings.Contains(lower, "pixel") && !strings.Contains(lower, "blogspot") {
+		if !strings.Contains(lower, "pixel") && !strings.Contains(lower, "blogspot") && !strings.Contains(lower, "wibufile") {
 			return
 		}
 		s := server{post: d.AttrOr("data-post", ""), nume: d.AttrOr("data-nume", ""), typ: d.AttrOr("data-type", ""), label: label, height: heightOf(label)}
@@ -312,7 +329,102 @@ func parseServers(doc *goquery.Document) []server {
 			out = append(out, s)
 		}
 	})
+
+	// Current pages expose Wibufile/Mega players, while their direct
+	// per-resolution Pixeldrain files live in the download list.
+	seen := map[int]bool{}
+	doc.Find(".download-eps li").Each(func(_ int, li *goquery.Selection) {
+		label := strings.TrimSpace(li.Find("strong").First().Text())
+		height := heightOf(label)
+		href := li.Find(`a[href*="pixeldrain.com/"]`).First().AttrOr("href", "")
+		if height > 0 && href != "" && !seen[height] {
+			seen[height] = true
+			out = append(out, server{label: "Pixeldrain " + label, direct: href, height: height})
+		}
+	})
 	return out
+}
+
+func (c *SamehadakuClient) resolveWibufile(ctx context.Context, src string) (string, error) {
+	u, err := url.Parse(src)
+	if err != nil {
+		return "", netx.NewParserError(sourceLabel, "wibufile embed", "invalid URL", err)
+	}
+	if !c.isWibufile(u) {
+		return "", nil
+	}
+	if strings.HasSuffix(strings.ToLower(u.Path), ".mp4") {
+		return u.String(), nil
+	}
+
+	body, err := c.fetchWibufile(ctx, u.String(), c.baseURL+"/", "wibufile embed")
+	if err != nil {
+		return "", err
+	}
+	m := wibufileAPIRe.FindStringSubmatch(string(body))
+	if m == nil {
+		return "", nil
+	}
+	apiURL, err := u.Parse(html.UnescapeString(m[1]))
+	if err != nil {
+		return "", netx.NewParserError(sourceLabel, "wibufile API", "invalid URL", err)
+	}
+	if !c.isWibufile(apiURL) {
+		return "", nil
+	}
+	body, err = c.fetchWibufile(ctx, apiURL.String(), u.String(), "wibufile API")
+	if err != nil {
+		return "", err
+	}
+	var response struct {
+		Sources []struct {
+			File string `json:"file"`
+		} `json:"sources"`
+	}
+	if err := json.Unmarshal(body, &response); err != nil {
+		return "", netx.NewParserError(sourceLabel, "wibufile API", "invalid response", err)
+	}
+	for _, source := range response.Sources {
+		mediaURL, parseErr := apiURL.Parse(source.File)
+		if parseErr == nil && c.isWibufile(mediaURL) {
+			return mediaURL.String(), nil
+		}
+	}
+	return "", nil
+}
+
+func (c *SamehadakuClient) fetchWibufile(ctx context.Context, rawURL, referer, layer string) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, http.NoBody)
+	if err != nil {
+		return nil, netx.NewParserError(sourceLabel, layer, "bad request URL", err)
+	}
+	req.Header.Set("User-Agent", netx.UserAgent)
+	req.Header.Set("Referer", referer)
+	resp, err := c.prober.Do(req) // #nosec G704 -- URL is restricted to the Wibufile host
+	if err != nil {
+		return nil, netx.NewParserError(sourceLabel, layer, "request failed", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, netx.NewHTTPStatusError(sourceLabel, layer, resp.StatusCode)
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxBodyBytes))
+	if err != nil {
+		return nil, netx.NewParserError(sourceLabel, layer, "failed to read response", err)
+	}
+	return body, nil
+}
+
+func (c *SamehadakuClient) isWibufile(u *url.URL) bool {
+	if u == nil || (u.Scheme != "http" && u.Scheme != "https") {
+		return false
+	}
+	base, err := url.Parse(c.wibufile)
+	if err != nil {
+		return false
+	}
+	host, baseHost := strings.ToLower(u.Hostname()), strings.ToLower(base.Hostname())
+	return host == baseHost || (baseHost == "api.wibufile.com" && strings.HasSuffix(host, ".wibufile.com"))
 }
 
 // resolveEmbed maps a server iframe to something the player can open, or "".
@@ -323,8 +435,8 @@ func (c *SamehadakuClient) resolveEmbed(src string) string {
 	return bloggerRe.FindString(src)
 }
 
-func iframeSrc(html string) string {
-	if m := iframeSrcRe.FindStringSubmatch(html); m != nil {
+func iframeSrc(markup string) string {
+	if m := iframeSrcRe.FindStringSubmatch(markup); m != nil {
 		return m[1]
 	}
 	return ""

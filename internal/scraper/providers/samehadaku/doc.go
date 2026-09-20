@@ -6,9 +6,7 @@
 //	GET  /<slug>-episode-<n>/                           → server list (data-post/nume/type)
 //	POST /wp-admin/admin-ajax.php action=player_ajax    → <iframe src=…>
 //
-// Servers resolved: Pixeldrain (pixeldrain.com/u/<id> → /api/file/<id>, a
-// direct mp4 per quality) and Blogspot (a Blogger video.g?token URL the player
-// already knows how to unwrap). Kraken/Vidhide/wibufile need per-host
-// scraping and are skipped. The host rotates (samehadaku.how → v2.…); only
-// the const below changes.
+// Servers resolved: Wibufile's per-quality player streams first, then
+// Pixeldrain download links and Blogspot as fallbacks. Mega is skipped. The
+// host rotates (samehadaku.how → v2.…); only the const below changes.
 package samehadaku
