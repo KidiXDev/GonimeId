@@ -183,6 +183,7 @@ func TestFilterMPVArgs_Whitelist(t *testing.T) {
 		allowed bool
 	}{
 		{"cache", "--cache=yes", true},
+		{"cache-pause-wait", "--cache-pause-wait=10", true},
 		{"hwdec", "--hwdec=auto-safe", true},
 		{"vo", "--vo=gpu", true},
 		{"no-config", "--no-config", true},

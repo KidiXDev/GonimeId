@@ -117,11 +117,23 @@ func defaultVideoOutputArg() string {
 // allowed_extensions=ALL demuxer flag — can be pinned by tests. Keep it in sync
 // with StartVideo's own base args; this covers only the per-playback args.
 func buildPlaybackArgs(in playbackArgsInput) []string {
+	lowerURL := strings.ToLower(in.VideoURL)
+	readahead := "20"
+	isWibufile := strings.Contains(lowerURL, ".wibufile.com/")
+	if isWibufile {
+		readahead = "60"
+	}
 	mpvArgs := []string{
 		"--cache=yes",
 		"--demuxer-max-bytes=300M",
-		"--demuxer-readahead-secs=20",
+		"--demuxer-readahead-secs=" + readahead,
 		"--audio-display=no",
+	}
+	if isWibufile {
+		mpvArgs = append(mpvArgs,
+			"--cache-pause-wait=10",
+			"--stream-lavf-o=reconnect=1,reconnect_streamed=1,reconnect_delay_max=5",
+		)
 	}
 
 	if in.UpscalingEnabled {
@@ -146,6 +158,9 @@ func buildPlaybackArgs(in playbackArgsInput) []string {
 	}
 
 	mpvArgs, playbackReferer := appendPlaybackRefererArgs(mpvArgs, in.VideoURL, in.IsHLS)
+	if userAgent := util.GetGlobalUserAgent(); userAgent != "" && (strings.HasPrefix(lowerURL, "http://") || strings.HasPrefix(lowerURL, "https://")) {
+		mpvArgs = append(mpvArgs, "--user-agent="+userAgent)
+	}
 	// Relax the HLS segment-extension allowlist so alternative-audio renditions
 	// with disguised segment extensions load (fixes video-plays-but-no-audio on
 	// SuperFlix/FirePlayer streams).

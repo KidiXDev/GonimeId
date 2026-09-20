@@ -7,6 +7,7 @@ import (
 	"github.com/KidiXDev/GonimeId/internal/api/source"
 	"github.com/KidiXDev/GonimeId/internal/models"
 	"github.com/KidiXDev/GonimeId/internal/scraper"
+	"github.com/KidiXDev/GonimeId/internal/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -33,6 +34,20 @@ func TestEpisodeNumber(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestApplyStreamMetadata(t *testing.T) {
+	applyStreamMetadata(map[string]string{
+		"referer":    "https://v2.samehadaku.how/",
+		"user_agent": "test-agent",
+	})
+	t.Cleanup(func() { applyStreamMetadata(nil) })
+	assert.Equal(t, "https://v2.samehadaku.how/", util.GetGlobalReferer())
+	assert.Equal(t, "test-agent", util.GetGlobalUserAgent())
+
+	applyStreamMetadata(nil)
+	assert.Empty(t, util.GetGlobalReferer(), "the next source must not inherit stale headers")
+	assert.Empty(t, util.GetGlobalUserAgent(), "the next source must not inherit stale headers")
 }
 
 func TestIDSubProviders_DescribeAndScraper(t *testing.T) {

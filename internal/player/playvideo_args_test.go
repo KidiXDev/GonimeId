@@ -59,6 +59,8 @@ func TestBuildPlaybackArgs(t *testing.T) {
 	restore := snapshotGlobalReferer()
 	defer restore()
 	util.SetGlobalReferer("https://ref.test")
+	util.SetGlobalUserAgent("test-agent")
+	defer util.ClearGlobalUserAgent()
 
 	t.Run("SuperFlix HLS movie carries referer + allowed_extensions + langs", func(t *testing.T) {
 		args := buildPlaybackArgs(playbackArgsInput{
@@ -107,6 +109,18 @@ func TestBuildPlaybackArgs(t *testing.T) {
 		assert.NotContains(t, args, "--http-header-fields=Referer: https://ref.test")
 		assert.NotContains(t, args, "--alang=por")
 		assert.Contains(t, args, "--no-config", "non-upscaled playback uses the standard profile")
+	})
+
+	t.Run("Wibufile progressive streams prebuffer and reconnect", func(t *testing.T) {
+		args := buildPlaybackArgs(playbackArgsInput{VideoURL: "https://s0.wibufile.com/video01/episode.mp4"})
+		assert.Contains(t, args, "--demuxer-readahead-secs=60")
+		assert.Contains(t, args, "--cache-pause-wait=10")
+		assert.Contains(t, args, "--stream-lavf-o=reconnect=1,reconnect_streamed=1,reconnect_delay_max=5")
+		assert.Contains(t, args, "--user-agent=test-agent")
+
+		other := buildPlaybackArgs(playbackArgsInput{VideoURL: "https://cdn.example.com/episode.mp4"})
+		assert.Contains(t, other, "--demuxer-readahead-secs=20")
+		assert.NotContains(t, other, "--cache-pause-wait=10")
 	})
 
 	t.Run("9Anime HLS adds yt-dlp impersonation plus the audio fix", func(t *testing.T) {

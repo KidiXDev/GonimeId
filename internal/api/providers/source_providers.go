@@ -160,6 +160,7 @@ func (p *idSubProvider) FetchStreamURL(ctx context.Context, episode *models.Epis
 		return "", err
 	}
 	util.ClearGlobalSubtitles()
+	applyStreamMetadata(nil)
 	if anime.Source != "" {
 		util.SetGlobalAnimeSource(anime.Source)
 	}
@@ -172,10 +173,11 @@ func (p *idSubProvider) FetchStreamURL(ctx context.Context, episode *models.Epis
 		return "", err
 	}
 	var url string
+	var streamMetadata map[string]string
 	if ca, ok := adapter.(scraper.ContextualScraper); ok {
-		url, _, err = ca.GetStreamURLContext(ctx, episode.URL, quality)
+		url, streamMetadata, err = ca.GetStreamURLContext(ctx, episode.URL, quality)
 	} else {
-		url, _, err = adapter.GetStreamURL(episode.URL, quality)
+		url, streamMetadata, err = adapter.GetStreamURL(episode.URL, quality)
 	}
 	if err != nil {
 		return "", fmt.Errorf("%s stream: %w", strings.ToLower(string(p.desc.Kind)), err)
@@ -183,7 +185,13 @@ func (p *idSubProvider) FetchStreamURL(ctx context.Context, episode *models.Epis
 	if url == "" {
 		return "", fmt.Errorf("empty stream URL returned from %s", p.desc.Kind)
 	}
+	applyStreamMetadata(streamMetadata)
 	return url, nil
+}
+
+func applyStreamMetadata(metadata map[string]string) {
+	util.SetGlobalReferer(metadata["referer"])
+	util.SetGlobalUserAgent(metadata["user_agent"])
 }
 
 // PreselectQuality always runs the resolution picker for interactive playback,

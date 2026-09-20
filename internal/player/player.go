@@ -577,6 +577,7 @@ func filterMPVArgs(args []string) []string {
 		"--gpu-context=",
 		"--profile=",
 		"--cache=",
+		"--cache-pause-wait=",
 		"--demuxer-max-bytes=",
 		"--demuxer-readahead-secs=",
 		"--video-latency-hacks=",
