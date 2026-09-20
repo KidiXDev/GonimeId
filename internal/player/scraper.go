@@ -3,6 +3,7 @@ package player
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -32,6 +33,8 @@ import (
 	"github.com/KidiXDev/GonimeId/internal/util/jsonx"
 	g "github.com/enetx/g"
 	"github.com/enetx/surf"
+	"github.com/quic-go/quic-go"
+	"github.com/quic-go/quic-go/http3"
 )
 
 // Pre-compiled regexes for player scraper (avoid per-call compilation)
@@ -1065,6 +1068,7 @@ func extractBloggerVideoURL(bloggerURL string) (string, error) {
 var bloggerProxy struct {
 	mu       sync.Mutex
 	server   *http.Server
+	client   *http.Client
 	port     string
 	videoURL string // direct googlevideo CDN URL
 }
@@ -1084,8 +1088,13 @@ func StopBloggerProxy() {
 		util.Debugf("Stopping Blogger proxy on port %s", bloggerProxy.port)
 		_ = bloggerProxy.server.Close()
 		bloggerProxy.server = nil
-		bloggerProxy.port = ""
 	}
+	if bloggerProxy.client != nil {
+		bloggerProxy.client.CloseIdleConnections()
+		bloggerProxy.client = nil
+	}
+	bloggerProxy.port = ""
+	bloggerProxy.videoURL = ""
 }
 
 // bloggerReadinessTimeout / bloggerReadinessInterval bound the post-start probe
@@ -1111,6 +1120,84 @@ func newBloggerProxyClient() *http.Client {
 		Std()
 	client.Timeout = 0 // streaming requests must not have a whole-request timeout
 	return client
+}
+
+type wibufileTransport struct {
+	base    http.RoundTripper
+	referer string
+}
+
+func (t wibufileTransport) CloseIdleConnections() {
+	if closer, ok := t.base.(interface{ Close() error }); ok {
+		_ = closer.Close()
+		return
+	}
+	if closer, ok := t.base.(interface{ CloseIdleConnections() }); ok {
+		closer.CloseIdleConnections()
+	}
+}
+
+func (t wibufileTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	clone := req.Clone(req.Context())
+	clone.Header = req.Header.Clone()
+	if t.referer != "" {
+		clone.Header.Set("Referer", t.referer)
+	}
+	return t.base.RoundTrip(clone)
+}
+
+func newWibufileProxyClient(referer string) *http.Client {
+	transport := &http3.Transport{
+		TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS12, NextProtos: []string{http3.NextProtoH3}},
+		QUICConfig: &quic.Config{
+			InitialStreamReceiveWindow:     16 << 20,
+			MaxStreamReceiveWindow:         64 << 20,
+			InitialConnectionReceiveWindow: 32 << 20,
+			MaxConnectionReceiveWindow:     128 << 20,
+			KeepAlivePeriod:                15 * time.Second,
+		},
+	}
+	return &http.Client{Transport: wibufileTransport{base: transport, referer: referer}}
+}
+
+func isWibufileVideoURL(rawURL string) bool {
+	u, err := neturl.Parse(rawURL)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+		return false
+	}
+	host := strings.ToLower(u.Hostname())
+	return host == "wibufile.com" || strings.HasSuffix(host, ".wibufile.com")
+}
+
+func startWibufileProxy(videoURL, referer string) (string, error) {
+	if !isWibufileVideoURL(videoURL) {
+		return "", fmt.Errorf("invalid Wibufile video URL")
+	}
+	StopBloggerProxy()
+	client := newWibufileProxyClient(referer)
+	probeCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	probe, err := http.NewRequestWithContext(probeCtx, http.MethodHead, videoURL, http.NoBody)
+	if err == nil {
+		var resp *http.Response
+		resp, err = client.Do(probe)
+		if resp != nil {
+			_ = resp.Body.Close()
+			if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+				err = fmt.Errorf("wibufile HTTP/3 probe returned %s", resp.Status)
+			}
+		}
+	}
+	cancel()
+	if err != nil {
+		client.CloseIdleConnections()
+		return "", err
+	}
+	proxyURL, err := startBloggerProxyServer(videoURL, client)
+	if err != nil {
+		StopBloggerProxy()
+		return "", err
+	}
+	return proxyURL + "?source=wibufile", nil
 }
 
 // startBloggerProxy starts a local Go HTTP proxy that extracts the video URL
@@ -1218,6 +1305,7 @@ func startBloggerProxyServer(videoURL string, proxyClient *http.Client) (string,
 
 	bloggerProxy.mu.Lock()
 	bloggerProxy.server = srv
+	bloggerProxy.client = proxyClient
 	bloggerProxy.port = port
 	bloggerProxy.mu.Unlock()
 

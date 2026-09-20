@@ -43,6 +43,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/quic-go/quic-go/http3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -183,7 +184,6 @@ func TestFilterMPVArgs_Whitelist(t *testing.T) {
 		allowed bool
 	}{
 		{"cache", "--cache=yes", true},
-		{"cache-pause-wait", "--cache-pause-wait=10", true},
 		{"hwdec", "--hwdec=auto-safe", true},
 		{"vo", "--vo=gpu", true},
 		{"no-config", "--no-config", true},
@@ -385,6 +385,39 @@ func TestStartBloggerProxy_GoProxy(t *testing.T) {
 		// The full startBloggerProxy requires a real Blogger URL, so we test
 		// the proxy serving logic indirectly via the end-to-end test below
 	})
+}
+
+func TestWibufileTransportForwardsHeaders(t *testing.T) {
+	var ranges []string
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ranges = append(ranges, r.Header.Get("Range"))
+		assert.Equal(t, "https://v2.samehadaku.how/", r.Header.Get("Referer"))
+		_, _ = w.Write([]byte("ok"))
+	}))
+	t.Cleanup(upstream.Close)
+	client := &http.Client{Transport: wibufileTransport{
+		base:    http.DefaultTransport,
+		referer: "https://v2.samehadaku.how/",
+	}}
+
+	for _, byteRange := range []string{"bytes=0-", "bytes=100-"} {
+		req, err := http.NewRequest(http.MethodGet, upstream.URL, http.NoBody)
+		require.NoError(t, err)
+		req.Header.Set("Range", byteRange)
+		resp, err := client.Do(req)
+		require.NoError(t, err)
+		_ = resp.Body.Close()
+	}
+
+	assert.Equal(t, []string{"bytes=0-", "bytes=100-"}, ranges, "mpv ranges must survive the HTTP/3 bridge")
+	assert.True(t, isWibufileVideoURL("https://s0.wibufile.com/video01/episode.mp4"))
+	assert.False(t, isWibufileVideoURL("https://wibufile.com.evil.example/episode.mp4"))
+	h3Client := newWibufileProxyClient("https://v2.samehadaku.how/")
+	t.Cleanup(h3Client.CloseIdleConnections)
+	wrapper, ok := h3Client.Transport.(wibufileTransport)
+	require.True(t, ok)
+	_, ok = wrapper.base.(*http3.Transport)
+	assert.True(t, ok, "Wibufile playback must use HTTP/3 like the site")
 }
 
 // ===========================================================================

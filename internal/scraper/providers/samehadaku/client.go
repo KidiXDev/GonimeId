@@ -292,7 +292,7 @@ func (c *SamehadakuClient) GetEpisodeStreamURL(ctx context.Context, episodeURL, 
 			continue // unknown host, or a removed file: try the next server
 		}
 		util.Debug("Samehadaku server resolved", "label", s.label)
-		return u, map[string]string{"source": "samehadaku", "referer": c.baseURL + "/", "user_agent": netx.UserAgent}, nil
+		return u, map[string]string{"source": "samehadaku", "referer": c.baseURL + "/"}, nil
 	}
 	return "", nil, netx.NewParserError(sourceLabel, "stream", "no resolvable server for this episode", lastErr)
 }

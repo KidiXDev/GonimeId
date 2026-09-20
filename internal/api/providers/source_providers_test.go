@@ -38,16 +38,13 @@ func TestEpisodeNumber(t *testing.T) {
 
 func TestApplyStreamMetadata(t *testing.T) {
 	applyStreamMetadata(map[string]string{
-		"referer":    "https://v2.samehadaku.how/",
-		"user_agent": "test-agent",
+		"referer": "https://v2.samehadaku.how/",
 	})
 	t.Cleanup(func() { applyStreamMetadata(nil) })
 	assert.Equal(t, "https://v2.samehadaku.how/", util.GetGlobalReferer())
-	assert.Equal(t, "test-agent", util.GetGlobalUserAgent())
 
 	applyStreamMetadata(nil)
 	assert.Empty(t, util.GetGlobalReferer(), "the next source must not inherit stale headers")
-	assert.Empty(t, util.GetGlobalUserAgent(), "the next source must not inherit stale headers")
 }
 
 func TestIDSubProviders_DescribeAndScraper(t *testing.T) {

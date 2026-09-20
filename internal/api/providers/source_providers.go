@@ -191,7 +191,6 @@ func (p *idSubProvider) FetchStreamURL(ctx context.Context, episode *models.Epis
 
 func applyStreamMetadata(metadata map[string]string) {
 	util.SetGlobalReferer(metadata["referer"])
-	util.SetGlobalUserAgent(metadata["user_agent"])
 }
 
 // PreselectQuality always runs the resolution picker for interactive playback,
