@@ -189,8 +189,7 @@ at every step:
 > (`rg 'ScraperType' --glob '!*_test.go'`) before renumbering. If unsure, move the
 > dead constant to the end of the block and mark it deprecated instead.
 
-Confirm the removal is clean: `rg -i '<name>' --stats` returns zero hits outside
-`CHANGELOG.md`.
+Confirm the removal is clean: `rg -i '<name>' --stats` returns zero hits.
 
 ---
 

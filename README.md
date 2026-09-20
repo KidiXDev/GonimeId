@@ -9,41 +9,36 @@
 GonimeId is a terminal app (TUI) for watching and downloading **Indonesian-subtitled anime** in mpv.
 Search once, pick a title, pick an episode, pick a resolution — it plays.
 
-It is a fork of [GoAnime](https://github.com/alvarorichard/GoAnime) by
-[alvarorichard](https://github.com/alvarorichard), refocused on Indonesian
-sources. The player, downloader, upscaler and tracking come from upstream; the
-Portuguese, English and movie/TV sources were removed.
-
 ## Sources
 
-| Source | Resolutions | Notes |
-|---|---|---|
-| [Otakudesu](https://otakudesu.blog) | 360p – 1080p | Download-section files (Pixeldrain) are preferred; streaming mirrors are the fallback |
-| [Samehadaku](https://v2.samehadaku.how) | 360p – 1080p | Pixeldrain servers, Blogspot fallback |
-| [Nimegami](https://nimegami.id) | 360p – 1080p | Direct berkasdrive files; one page per season |
-| [YLnime](https://ylnime.com) | 360p – 1080p | Direct MP4/HLS mirrors |
+| Source                                  | Resolutions  | Notes                                                                                 |
+| --------------------------------------- | ------------ | ------------------------------------------------------------------------------------- |
+| [Otakudesu](https://otakudesu.blog)     | 360p – 1080p | Download-section files (Pixeldrain) are preferred; streaming mirrors are the fallback |
+| [Samehadaku](https://v2.samehadaku.how) | 360p – 1080p | Pixeldrain servers, Blogspot fallback                                                 |
+| [Nimegami](https://nimegami.id)         | 360p – 1080p | Direct berkasdrive files; one page per season                                         |
+| [YLnime](https://ylnime.com)            | 360p – 1080p | Direct MP4/HLS mirrors                                                                |
 
 All four are searched together by default. Dead or geo-locked files are probed and
 skipped before anything reaches mpv.
 
 ## Features
 
-* Search across all sources, one picker
-* Resolution picker (remembered for the session) or `--quality 1080p`
-* Play in mpv with skip-intro/outro (AniSkip) and resume tracking (SQLite build)
-* Download single episodes, ranges, or everything — Plex/Jellyfin folder naming
-* Real-time Anime4K upscaling in mpv
-* Discord Rich Presence
+- Search across all sources, one picker
+- Resolution picker (remembered for the session) or `--quality 1080p`
+- Play in mpv with skip-intro/outro (AniSkip) and resume tracking (SQLite build)
+- Download single episodes, ranges, or everything — Plex/Jellyfin folder naming
+- Real-time Anime4K upscaling in mpv
+- Discord Rich Presence
 
 ## Prerequisites
 
-* [mpv](https://mpv.io/) — required
-* `ffmpeg`/`ffprobe` — optional, only for some downloads
+- [mpv](https://mpv.io/) — required
+- `ffmpeg`/`ffprobe` — optional, only for some downloads
 
 ```bash
-# Arch / CachyOS
+# Arch
 sudo pacman -S mpv ffmpeg
-# Debian / Ubuntu
+# Debian
 sudo apt install mpv ffmpeg
 # macOS
 brew install mpv ffmpeg
@@ -89,11 +84,11 @@ In the play menu, **Play** is the first item; Esc goes back one step everywhere.
 
 ### Environment
 
-| Variable | Effect |
-|---|---|
+| Variable                              | Effect                                                 |
+| ------------------------------------- | ------------------------------------------------------ |
 | `GONIMEID_DISABLED_SOURCES=Otakudesu` | turn a source off without rebuilding (comma-separated) |
-| `GONIMEID_ENABLED_SOURCES=…` | opt in to a source shipped disabled |
-| `GONIMEID_STRICT_SOURCE=1` | never fall back to another source |
+| `GONIMEID_ENABLED_SOURCES=…`          | opt in to a source shipped disabled                    |
+| `GONIMEID_STRICT_SOURCE=1`            | never fall back to another source                      |
 
 Debug logs: run with `--debug`; the log path is printed at startup
 (`~/.local/share/gonimeid/logs/` on Linux).
@@ -105,7 +100,7 @@ read the lines after `Loading episode...`. Usually the chosen file was removed
 upstream; pick another resolution or the other source.
 
 **Search returns nothing for a multi-word title** — type it with spaces
-(`"naruto kecil"`), not hyphens.
+(`"one piece"`), not hyphens.
 
 **TLS errors behind a corporate proxy / custom CA** — point Go at the CA bundle:
 
@@ -117,14 +112,13 @@ export SSL_CERT_DIR=/path/to/ca-certificates.d
 ## Contributing
 
 See [docs/Development.md](docs/Development.md) and
-[docs/ADDING_A_SOURCE.md](docs/ADDING_A_SOURCE.md) (the next Indonesian source
-is one leaf package plus one provider block).
+[docs/ADDING_A_SOURCE.md](docs/ADDING_A_SOURCE.md)
 
 ## Credits
 
-* [GoAnime](https://github.com/alvarorichard/GoAnime) — the upstream project this fork is built on
-* [mpv](https://mpv.io/), [Anime4K](https://github.com/bloc97/Anime4K), [AniSkip](https://api.aniskip.com/)
+- [GoAnime](https://github.com/alvarorichard/GoAnime) — the upstream project this fork is built on
+- [mpv](https://mpv.io/), [Anime4K](https://github.com/bloc97/Anime4K), [AniSkip](https://api.aniskip.com/)
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Upstream copyright is retained.
+MIT — see [LICENSE](LICENSE).
