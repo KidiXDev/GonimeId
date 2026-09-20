@@ -102,6 +102,17 @@ func init() {
 			ProbeURL:    "https://ylnime.com",
 		},
 	})
+	source.Register(&idSubProvider{
+		st: scraper.MoenimeType,
+		desc: source.Descriptor{
+			Kind:        source.Moenime,
+			Priority:    50,
+			Explicit:    []string{"Moenime"},
+			Tags:        []string{"[moenime]"},
+			URLMatchers: []string{"moenime.com", "moeclip.com"},
+			ProbeURL:    "https://moenime.com",
+		},
+	})
 }
 
 func (p *idSubProvider) scraper() (scraper.UnifiedScraper, error) {

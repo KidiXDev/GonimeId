@@ -17,8 +17,9 @@ Search once, pick a title, pick an episode, pick a resolution — it plays.
 | [Samehadaku](https://v2.samehadaku.how) | 360p – 1080p | Pixeldrain servers, Blogspot fallback                                                 |
 | [Nimegami](https://nimegami.id)         | 360p – 1080p | Direct berkasdrive files; one page per season                                         |
 | [YLnime](https://ylnime.com)            | 360p – 1080p | Direct MP4/HLS mirrors                                                                |
+| [Moenime](https://moenime.com)          | 240p – 720p  | Moeclip players with short-lived signed MP4 links                                     |
 
-All four are searched together by default. Dead or geo-locked files are probed and
+All five are searched together by default. Dead or geo-locked files are probed and
 skipped before anything reaches mpv.
 
 ## Features
@@ -67,7 +68,7 @@ With watch-progress tracking (needs SQLite headers): `cd build && ./buildlinux-w
 ```bash
 gonimeid                       # interactive: search → title → episode → quality → play
 gonimeid "one piece"           # search directly (use spaces, not hyphens)
-gonimeid --source nimegami "frieren"    # otakudesu | samehadaku | nimegami | ylnime
+gonimeid --source nimegami "frieren"    # otakudesu | samehadaku | nimegami | ylnime | moenime
 gonimeid --quality 1080p "frieren"       # download default; playback still asks per source
 
 gonimeid -d "one piece" 1      # download episode 1

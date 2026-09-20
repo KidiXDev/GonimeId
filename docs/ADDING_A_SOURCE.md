@@ -111,7 +111,7 @@ source.Register(&idSubProvider{
 | `DefaultDisabled` | ships off unless `GONIMEID_ENABLED_SOURCES` names it | shipping live |
 | `ProbeURL` | homepage; HEAD-probed on search timeout to tell "site down" from "opaque hang" | GraphQL/opaque APIs, browser-gated sources |
 
-Priorities in use: Otakudesu `10` · Samehadaku `20` · Nimegami `30` · YLnime `40`.
+Priorities in use: Otakudesu `10` · Samehadaku `20` · Nimegami `30` · YLnime `40` · Moenime `50`.
 Leave gaps of 10. Priority is ignored when `anime.Source` matches an `Explicit`
 entry.
 

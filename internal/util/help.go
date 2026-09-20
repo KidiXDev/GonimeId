@@ -69,7 +69,7 @@ func ShowBeautifulHelp() {
 	// Program title
 	helpContent.WriteString(titleStyle.Render("GonimeId - Anime Sub Indo dari Terminal"))
 	helpContent.WriteString("\n")
-	helpContent.WriteString(subtitleStyle.Render("Search, stream and download Indonesian-subtitled anime (Otakudesu, Samehadaku, Nimegami, YLnime) with mpv."))
+	helpContent.WriteString(subtitleStyle.Render("Search, stream and download Indonesian-subtitled anime (Otakudesu, Samehadaku, Nimegami, YLnime, Moenime) with mpv."))
 	helpContent.WriteString("\n\n")
 
 	// Usage section
@@ -107,7 +107,7 @@ func ShowBeautifulHelp() {
 	addOption(&helpContent, "-d", "Download mode - download specific episodes for offline viewing.")
 	addOption(&helpContent, "-r", "Range download mode - download multiple episodes (use with -d).")
 	addOption(&helpContent, "-a", "Download ALL episodes (use with -d).")
-	addOption(&helpContent, "--source", "Search one source only: otakudesu, samehadaku, nimegami or ylnime. Default: all.")
+	addOption(&helpContent, "--source", "Search one source only: otakudesu, samehadaku, nimegami, ylnime or moenime. Default: all.")
 	addOption(&helpContent, "--quality", "Default download quality (1080p, 720p, 480p, 360p). Interactive playback always asks per source.")
 	addOption(&helpContent, "-o", "Output directory for downloads (default: ~/.local/gonimeid/downloads/anime/). Files use Plex naming: Anime - S01E01.mp4.")
 	helpContent.WriteString("\n")
@@ -134,7 +134,7 @@ func ShowBeautifulHelp() {
 	helpContent.WriteString(sectionTitleStyle.Render("Features:"))
 	helpContent.WriteString("\n")
 
-	addFeature(&helpContent, "Indonesian Sources", "Otakudesu, Samehadaku, Nimegami and YLnime, searched together; dead mirrors are skipped automatically.")
+	addFeature(&helpContent, "Indonesian Sources", "Otakudesu, Samehadaku, Nimegami, YLnime and Moenime, searched together; dead mirrors are skipped automatically.")
 	addFeature(&helpContent, "Smart Search", "Intelligent search with fuzzy matching and suggestions.")
 	addFeature(&helpContent, "Quality Selection", "Pick a resolution before every interactive playback; higher-quality download files are preferred over streaming mirrors.")
 	addFeature(&helpContent, "Batch Downloads", "Download single episodes, ranges, or entire seasons for offline viewing.")

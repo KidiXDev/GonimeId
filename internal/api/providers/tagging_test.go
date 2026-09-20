@@ -10,7 +10,7 @@ import (
 
 func TestTagResults_StampsSourceWithoutLanguageTag(t *testing.T) {
 	t.Parallel()
-	for _, kind := range []source.SourceKind{source.Otakudesu, source.Samehadaku, source.Nimegami, source.Ylnime} {
+	for _, kind := range []source.SourceKind{source.Otakudesu, source.Samehadaku, source.Nimegami, source.Ylnime, source.Moenime} {
 		res := []*models.Anime{{Name: "Naruto", URL: "id1"}, {Name: "Bleach"}}
 		tagResults(res, kind)
 		for _, a := range res {
@@ -22,7 +22,7 @@ func TestTagResults_StampsSourceWithoutLanguageTag(t *testing.T) {
 
 func TestSourceDisplayName_MatchesDescriptorExplicit(t *testing.T) {
 	t.Parallel()
-	for _, kind := range []source.SourceKind{source.Otakudesu, source.Samehadaku, source.Nimegami, source.Ylnime} {
+	for _, kind := range []source.SourceKind{source.Otakudesu, source.Samehadaku, source.Nimegami, source.Ylnime, source.Moenime} {
 		s, ok := source.Registered(kind)
 		if !ok {
 			t.Fatalf("%s not registered", kind)

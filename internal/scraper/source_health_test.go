@@ -19,6 +19,7 @@ func TestDefaultHealthCheckQuery(t *testing.T) {
 		{"samehadaku", SamehadakuType, "naruto"},
 		{"nimegami", NimegamiType, "naruto"},
 		{"ylnime", YlnimeType, "naruto"},
+		{"moenime", MoenimeType, "naruto"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

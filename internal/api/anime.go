@@ -527,7 +527,7 @@ var (
 	// CleanTitle patterns, applied in order
 	reMediaTags = regexp.MustCompile(`^\s*\[(?:Movies?(?:/TV)?|TV|Anime|Series|Show)\]\s*`)
 	reLangTags  = regexp.MustCompile(`^\s*\[(?:English|Indonesian|PT-BR|Portuguese|Português|Japonês|Japanese|Multilanguage)\]\s*`)
-	reSourceTag = regexp.MustCompile(`(?i)[🔥🌐]?\[(?:animefire|allanime|anidb|animedrive|9anime|otakudesu|samehadaku|nimegami|ylnime)\]\s*`)
+	reSourceTag = regexp.MustCompile(`(?i)[🔥🌐]?\[(?:animefire|allanime|anidb|animedrive|9anime|otakudesu|samehadaku|nimegami|ylnime|moenime)\]\s*`)
 	reEmDash    = regexp.MustCompile(`\s*[–—]\s+.*$`)
 	// For the regular hyphen ( - ) we cannot strip blindly — it appears inside legitimate
 	// titles such as "Jujutsu Kaisen: Shimetsu Kaiyuu - Zenpen" / "- Kouhen" (前編/後編,
@@ -541,7 +541,7 @@ var (
 		`\d+[ªº]?\s*temporada|temporada\s*\d*|` +
 		`season\s*\d+|\d+(?:st|nd|rd|th)\s*season|` +
 		`parte\s*\d+|part\s*\d+|` +
-		`otakudesu|samehadaku|nimegami|ylnime` +
+		`otakudesu|samehadaku|nimegami|ylnime|moenime` +
 		`).*$`)
 	reLangParens    = regexp.MustCompile(`(?i)\s*\([^)]*(?:dublado|legendado|dub|sub)[^)]*\)`)
 	reLangSuffix    = regexp.MustCompile(`(?i)\s+(?:dublado|legendado|dub|sub|dual\s*[aá]udio)\s*$`)
