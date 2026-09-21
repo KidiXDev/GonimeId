@@ -35,9 +35,9 @@ type homeEntry struct {
 	success lipgloss.Style
 }
 
-func (e homeEntry) FilterValue() string { return e.series.Title + " " + e.series.Source }
-func (e homeEntry) Title() string       { return singleLine(e.series.Title) }
-func (e homeEntry) Description() string {
+func (e *homeEntry) FilterValue() string { return e.series.Title + " " + e.series.Source }
+func (e *homeEntry) Title() string       { return singleLine(e.series.Title) }
+func (e *homeEntry) Description() string {
 	latest, ok := latestEpisode(e.series)
 	if !ok {
 		return "No episode progress"
@@ -120,7 +120,7 @@ func (m *homeModel) setTab(tab int) {
 		if m.tab == 0 && (series.Finished() || (series.MediaType == "movie" && len(series.Episodes) > 0 && series.Episodes[0].Completed)) {
 			continue
 		}
-		items = append(items, homeEntry{series: series, success: m.theme.Success})
+		items = append(items, &homeEntry{series: series, success: m.theme.Success})
 	}
 	m.entries.SetItems(items)
 	if len(items) > 0 {
@@ -200,7 +200,7 @@ func (m *homeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *homeModel) quitWithSelected(action HomeAction) (tea.Model, tea.Cmd) {
-	entry, ok := m.entries.SelectedItem().(homeEntry)
+	entry, ok := m.entries.SelectedItem().(*homeEntry)
 	if !ok {
 		return m, nil
 	}
@@ -209,11 +209,9 @@ func (m *homeModel) quitWithSelected(action HomeAction) (tea.Model, tea.Cmd) {
 }
 
 func (m *homeModel) View() tea.View {
-	tabs := m.theme.Primary.Render("[Continue]") + "   " + m.theme.Muted.Render("Recent")
+	tabs := m.theme.Muted.Render("Continue") + "   " + m.theme.Primary.Render("[Recent]")
 	if m.tab == 0 {
 		tabs = m.theme.Primary.Render("[Continue]") + "   " + m.theme.Muted.Render("Recent")
-	} else {
-		tabs = m.theme.Muted.Render("Continue") + "   " + m.theme.Primary.Render("[Recent]")
 	}
 	listBody := m.entries.View()
 	if len(m.entries.Items()) == 0 && m.entries.FilterState() == list.Unfiltered {
@@ -250,7 +248,7 @@ func (m *homeModel) View() tea.View {
 }
 
 func (m *homeModel) detail() string {
-	entry, ok := m.entries.SelectedItem().(homeEntry)
+	entry, ok := m.entries.SelectedItem().(*homeEntry)
 	if !ok {
 		return m.theme.Panel.Width(max(m.detailWidth-4, 1)).Render("Search for an anime to begin your watch history.\n\nPress s to search.")
 	}

@@ -26,8 +26,8 @@ const (
 )
 
 var (
-	episodePathRe = regexp.MustCompile(`/([0-9]+?)/?$`)
-	qualityRe     = regexp.MustCompile(`(?i)([0-9]{3,4})p`)
+	episodePathRe = regexp.MustCompile(`/(\d+?)/?$`)
+	qualityRe     = regexp.MustCompile(`(?i)(\d{3,4})p`)
 	playerFileRe  = regexp.MustCompile(`\bfile\s*:\s*['"]([^'"]+)['"]`)
 	titleNoiseRe  = regexp.MustCompile(`(?i)\s*(?:\(episode\s*\d+\)\s*)?sub\s+indo\s*$`)
 )
@@ -225,7 +225,7 @@ func (c *Client) Qualities(ctx context.Context, episodeURL string) ([]string, er
 	return info.qualities, err
 }
 
-func (c *Client) GetEpisodeStreamURL(ctx context.Context, episodeURL, quality string) (string, map[string]string, error) {
+func (c *Client) GetEpisodeStreamURL(ctx context.Context, episodeURL, quality string) (streamURL string, metadata map[string]string, err error) {
 	info, err := c.playerInfo(ctx, episodeURL)
 	if err != nil {
 		return "", nil, err
@@ -246,7 +246,7 @@ func (c *Client) GetEpisodeStreamURL(ctx context.Context, episodeURL, quality st
 	if m == nil {
 		return "", nil, netx.NewParserError(sourceLabel, "player", "no media file in Moeclip player (layout changed?)", nil)
 	}
-	streamURL := string(m[1])
+	streamURL = string(m[1])
 	if !c.playable(ctx, streamURL) {
 		return "", nil, netx.NewParserError(sourceLabel, "stream", "Moeclip media file is not playable", nil)
 	}

@@ -309,19 +309,23 @@ func migrateMediaProgress(db *sql.DB) error {
 	if err != nil {
 		return fmt.Errorf("inspect progress schema: %w", err)
 	}
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Printf("Error closing rows: %v", err)
+		}
+	}()
 	columns := map[string]bool{}
 	for rows.Next() {
 		var cid, notNull, pk int
 		var name, kind string
 		var defaultValue any
 		if err := rows.Scan(&cid, &name, &kind, &notNull, &defaultValue, &pk); err != nil {
-			_ = rows.Close()
 			return fmt.Errorf("scan progress schema: %w", err)
 		}
 		columns[name] = true
 	}
-	if err := rows.Close(); err != nil {
-		return fmt.Errorf("close progress schema rows: %w", err)
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("iterate progress schema: %w", err)
 	}
 
 	baseRequired := []string{"series_key", "series_url", "series_title", "source", "episode_url", "completed"}

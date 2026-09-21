@@ -24,11 +24,12 @@ func printEpisodeNotFoundMsg() {
 func HandleSeries(ctx context.Context, anime *models.Anime, episodes []models.Episode, totalEpisodes int, discordEnabled bool) error {
 	player.SetTrackingMedia(anime)
 	player.SetTrackingEpisodeCount(totalEpisodes)
-	if anime.IsMovie() {
+	switch {
+	case anime.IsMovie():
 		util.Infof("The selected title has %d episode.\n", totalEpisodes)
-	} else if anime.IsTV() {
+	case anime.IsTV():
 		util.Infof("The selected TV show has %d episodes.\n", totalEpisodes)
-	} else {
+	default:
 		util.Infof("The selected anime is a series with %d episodes.\n", totalEpisodes)
 	}
 	animeMutex := sync.Mutex{}

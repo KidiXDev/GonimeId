@@ -29,8 +29,8 @@ const (
 )
 
 var (
-	episodeNumRe = regexp.MustCompile(`(?i)episode[-\s]+([0-9]+)`)
-	qualityRe    = regexp.MustCompile(`(?i)([0-9]{3,4})p?`)
+	episodeNumRe = regexp.MustCompile(`(?i)episode[-\s]+(\d+)`)
+	qualityRe    = regexp.MustCompile(`(?i)(\d{3,4})p?`)
 	abyssDataRe  = regexp.MustCompile(`const\s+datas\s*=\s*"([^"]+)"`)
 )
 
@@ -233,7 +233,7 @@ func (c *Client) Qualities(ctx context.Context, episodeURL string) ([]string, er
 	return qualities, nil
 }
 
-func (c *Client) GetEpisodeStreamURL(ctx context.Context, episodeURL, quality string) (string, map[string]string, error) {
+func (c *Client) GetEpisodeStreamURL(ctx context.Context, episodeURL, quality string) (streamURL string, metadata map[string]string, err error) {
 	sources, referer, err := c.episodeSources(ctx, episodeURL)
 	if err != nil {
 		return "", nil, err

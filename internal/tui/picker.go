@@ -372,16 +372,16 @@ func (m *pickerModel) View() tea.View {
 	return view
 }
 
-func toggleCompactFooter(width int, key string) string {
+func toggleCompactFooter(width int, keyLabel string) string {
 	switch {
 	case width >= 40:
-		return fmt.Sprintf("↑↓ move · enter select · %s complete · esc", key)
+		return fmt.Sprintf("↑↓ move · enter select · %s complete · esc", keyLabel)
 	case width >= 28:
-		return fmt.Sprintf("enter · %s complete · esc", key)
+		return fmt.Sprintf("enter · %s complete · esc", keyLabel)
 	case width >= 18:
-		return fmt.Sprintf("%s complete · enter", key)
+		return fmt.Sprintf("%s complete · enter", keyLabel)
 	default:
-		return fmt.Sprintf("%s ✓ · enter", key)
+		return fmt.Sprintf("%s ✓ · enter", keyLabel)
 	}
 }
 
