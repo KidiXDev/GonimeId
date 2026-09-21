@@ -25,16 +25,29 @@ type PickItem struct {
 	Label   string   // primary row text
 	Details string   // secondary row text (optional)
 	Preview []string // side panel lines on wide terminals (optional)
+	Success bool     // render the primary row as a positive state
 }
 
 // PickOptions configure a generic picker screen.
 type PickOptions struct {
-	Breadcrumb   string // shell navigation trail, e.g. "Search > Seasons"
-	WindowTitle  string // terminal window title
-	ItemSingular string // status bar noun, e.g. "season"
-	ItemPlural   string // status bar plural noun, e.g. "seasons"
-	InitialIndex int    // preselected row in the items slice
+	Breadcrumb   string        // shell navigation trail, e.g. "Search > Seasons"
+	WindowTitle  string        // terminal window title
+	ItemSingular string        // status bar noun, e.g. "season"
+	ItemPlural   string        // status bar plural noun, e.g. "seasons"
+	InitialIndex int           // preselected row in the items slice
+	ToggleKey    string        // optional key that returns a toggle action for the selected row
+	ToggleLabel  string        // footer label for ToggleKey
+	External     <-chan string // optional external event that closes the picker
 }
+
+// PickResult distinguishes normal selection from an optional row toggle.
+type PickResult struct {
+	Index   int
+	Toggled bool
+	Event   string
+}
+
+type pickerExternalMsg string
 
 type pickEntry struct {
 	index int
@@ -49,6 +62,9 @@ func (e pickEntry) FilterValue() string {
 // Title returns the sanitized primary row text.
 func (e pickEntry) Title() string {
 	if label := singleLine(e.item.Label); label != "" {
+		if e.item.Success {
+			return NewTheme(true).Success.Render(label)
+		}
 		return label
 	}
 	return "Untitled"
@@ -65,6 +81,8 @@ type pickerModel struct {
 	options       PickOptions
 	entries       list.Model
 	selectedIndex int
+	toggled       bool
+	externalEvent string
 	err           error
 	filterPending bool
 }
@@ -143,6 +161,15 @@ func newPickerModel(items []PickItem, opts PickOptions) *pickerModel {
 
 // Init starts the picker screen without background work.
 func (m *pickerModel) Init() tea.Cmd {
+	if m.options.External != nil {
+		return func() tea.Msg {
+			event, ok := <-m.options.External
+			if !ok {
+				event = "closed"
+			}
+			return pickerExternalMsg(event)
+		}
+	}
 	return nil
 }
 
@@ -154,6 +181,9 @@ func (m *pickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.filterPending = false
 	}
 	switch msg := msg.(type) {
+	case pickerExternalMsg:
+		m.externalEvent = string(msg)
+		return m, tea.Quit
 	case tea.WindowSizeMsg:
 		m.shell.Resize(msg.Width, msg.Height)
 		width, height := m.shell.ContentSize()
@@ -200,6 +230,13 @@ func (m *pickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 		default:
+			if !filtering && m.options.ToggleKey != "" && msg.String() == m.options.ToggleKey {
+				if entry, ok := m.entries.SelectedItem().(pickEntry); ok {
+					m.selectedIndex = entry.index
+					m.toggled = true
+					return m, tea.Quit
+				}
+			}
 			// fzf-style: typing while browsing opens the filter with that char.
 			if !filtering && isTypeToFilterKey(msg) {
 				return m.startFilterWithKey(msg)
@@ -319,7 +356,13 @@ func isTypeToFilterKey(msg tea.KeyPressMsg) bool {
 
 // View renders the full-width picker list (no side panel).
 func (m *pickerModel) View() tea.View {
-	view := tea.NewView(m.shell.Render(m.entries.View(), pickerFooter))
+	footer := pickerFooter
+	shell := m.shell
+	if m.options.ToggleKey != "" && m.options.ToggleLabel != "" {
+		footer = fmt.Sprintf("↑↓ move · type filter · enter select · %s %s · esc back", m.options.ToggleKey, m.options.ToggleLabel)
+		shell.CompactFooter = toggleCompactFooter(shell.Width, m.options.ToggleKey)
+	}
+	view := tea.NewView(shell.Render(m.entries.View(), footer))
 	view.AltScreen = true
 	title := m.options.WindowTitle
 	if title == "" {
@@ -329,11 +372,31 @@ func (m *pickerModel) View() tea.View {
 	return view
 }
 
+func toggleCompactFooter(width int, keyLabel string) string {
+	switch {
+	case width >= 40:
+		return fmt.Sprintf("↑↓ move · enter select · %s complete · esc", keyLabel)
+	case width >= 28:
+		return fmt.Sprintf("enter · %s complete · esc", keyLabel)
+	case width >= 18:
+		return fmt.Sprintf("%s complete · enter", keyLabel)
+	default:
+		return fmt.Sprintf("%s ✓ · enter", keyLabel)
+	}
+}
+
 type pickRunner func(tea.Model) (tea.Model, error)
 
 // Pick opens a styled fuzzy picker and returns the chosen item index.
 func Pick(items []PickItem, opts PickOptions) (int, error) {
-	return pickWithRunner(items, opts, runScreen)
+	result, err := PickAction(items, opts)
+	return result.Index, err
+}
+
+// PickAction opens a picker that can optionally return a row-toggle action.
+func PickAction(items []PickItem, opts PickOptions) (PickResult, error) {
+	index, toggled, event, err := pickActionWithRunner(items, opts, runScreen)
+	return PickResult{Index: index, Toggled: toggled, Event: event}, err
 }
 
 // PickLabels is a convenience for simple one-line menus (download options,
@@ -355,26 +418,34 @@ func PickLabels(labels []string, opts PickOptions) (int, error) {
 
 // pickWithRunner isolates terminal execution for deterministic tests.
 func pickWithRunner(items []PickItem, opts PickOptions, run pickRunner) (int, error) {
+	index, _, _, err := pickActionWithRunner(items, opts, run)
+	return index, err
+}
+
+func pickActionWithRunner(items []PickItem, opts PickOptions, run pickRunner) (int, bool, string, error) {
 	if len(items) == 0 {
-		return -1, ErrNoPickItems
+		return -1, false, "", ErrNoPickItems
 	}
 	if run == nil {
-		return -1, fmt.Errorf("picker runner not configured")
+		return -1, false, "", fmt.Errorf("picker runner not configured")
 	}
 
 	final, err := run(newPickerModel(items, opts))
 	if err != nil {
-		return -1, fmt.Errorf("run picker screen: %w", err)
+		return -1, false, "", fmt.Errorf("run picker screen: %w", err)
 	}
 	model, ok := final.(*pickerModel)
 	if !ok || model == nil {
-		return -1, fmt.Errorf("unexpected picker model %T", final)
+		return -1, false, "", fmt.Errorf("unexpected picker model %T", final)
 	}
 	if model.err != nil {
-		return -1, model.err
+		return -1, false, "", model.err
+	}
+	if model.externalEvent != "" {
+		return -1, false, model.externalEvent, nil
 	}
 	if model.selectedIndex < 0 || model.selectedIndex >= len(items) {
-		return -1, ErrPickCancelled
+		return -1, false, "", ErrPickCancelled
 	}
-	return model.selectedIndex, nil
+	return model.selectedIndex, model.toggled, "", nil
 }

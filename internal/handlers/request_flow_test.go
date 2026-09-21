@@ -299,6 +299,18 @@ func TestHandlePlaybackMode_SymbolPin(t *testing.T) {
 	_ = HandlePlaybackMode
 }
 
+func TestUseEpisodeSelector(t *testing.T) {
+	movie := &models.Anime{MediaType: models.MediaTypeMovie}
+	series := &models.Anime{MediaType: models.MediaTypeAnime}
+
+	assert.True(t, useMovieEpisodeSelector(movie, true), "saved movies open the episode selector")
+	assert.False(t, useMovieEpisodeSelector(movie, false), "direct movies keep the fast path")
+	assert.True(t, useEpisodeSelector(series, 1, true), "saved one-episode series open the episode selector")
+	assert.False(t, useEpisodeSelector(movie, 1, true), "movies retain movie-specific playback after selection")
+	assert.False(t, useEpisodeSelector(series, 1, false), "direct one-episode titles keep the fast path")
+	assert.True(t, useEpisodeSelector(series, 2, false), "direct series still open the episode selector")
+}
+
 // --- HandleUpdateRequest ---
 
 func TestHandleUpdateRequest_DoesNotPanic(t *testing.T) {

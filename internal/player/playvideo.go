@@ -2,6 +2,7 @@ package player
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -30,6 +31,9 @@ var ErrChangeAnime = errors.New("user requested to change anime")
 
 // ErrBackToDownloadOptions is returned when user wants to go back to download options
 var ErrBackToDownloadOptions = errors.New("back to download options")
+
+// ErrPlaybackFinished ends the current episode flow without reopening its menu.
+var ErrPlaybackFinished = errors.New("playback finished")
 
 // errStayInPlayerMenu signals that a menu action was a no-op (playlist
 // boundary hit or back from the episode picker). The in-player menu loop must
@@ -717,7 +721,7 @@ func playVideo(
 	stopTracking := startTrackingRoutine(tracker, socketPath, anilistID, currentEpisode, currentEpisodeNum, updater)
 
 	// Handle user input for interactive controls
-	err = handleUserInput(
+	err = handleUserInputWithEvents(
 		socketPath,
 		episodes,
 		currentEpisodeIndex,
@@ -727,6 +731,7 @@ func playVideo(
 		updater,
 		stopTracking,
 		currentEpisode,
+		watchMPVEnd(socketPath),
 	)
 
 	// Close the tracking channel if it's still open
@@ -855,6 +860,41 @@ func trackingKey(episodeURL string, episodeNum int) string {
 	return fmt.Sprintf("%s:ep%d", episodeURL, episodeNum)
 }
 
+func seriesTrackingKey(anilistID int) string {
+	if anilistID > 0 {
+		return fmt.Sprintf("anilist:%d", anilistID)
+	}
+	snap := snapshotMedia()
+	if snap.AnimeURL == "" {
+		return ""
+	}
+	return strings.ToLower(strings.TrimSpace(snap.AnimeSource)) + ":" + strings.TrimSpace(snap.AnimeURL)
+}
+
+func episodeTrackingKey(episodeURL string, episodeNum, anilistID int) string {
+	if seriesKey := seriesTrackingKey(anilistID); seriesKey != "" {
+		return fmt.Sprintf("%s:ep%d", seriesKey, episodeNum)
+	}
+	return trackingKey(episodeURL, episodeNum)
+}
+
+func trackingRecord(anilistID int, episode *models.Episode, episodeNum, position, duration int) tracking.Anime {
+	snap := snapshotMedia()
+	seriesTitle := snap.AnimeName
+	if seriesTitle == "" {
+		seriesTitle = getEpisodeTitle(episode.Title)
+	}
+	return tracking.Anime{
+		AnilistID: anilistID, AllanimeID: episodeTrackingKey(episode.URL, episodeNum, anilistID),
+		SeriesKey: seriesTrackingKey(anilistID), SeriesURL: snap.AnimeURL, SeriesTitle: seriesTitle,
+		Source: snap.AnimeSource, EpisodeURL: episode.URL, EpisodeNumber: episodeNum,
+		TotalEpisodes: snap.TotalEpisodes,
+		PlaybackTime:  position, Duration: duration, Title: getEpisodeTitle(episode.Title),
+		MediaType: snap.MediaType, Completed: duration > 0 && position*100 >= duration*90,
+		LastUpdated: time.Now(),
+	}
+}
+
 // initTracking inicializa o sistema de rastreamento
 func initTracking(anilistID int, episode *models.Episode, episodeNum int) (resultTracker *tracking.LocalTracker, resumePosition int) {
 	if !tracking.IsCgoEnabled {
@@ -879,7 +919,7 @@ func initTracking(anilistID int, episode *models.Episode, episodeNum int) (resul
 		}
 	}
 
-	key := trackingKey(episode.URL, episodeNum)
+	key := episodeTrackingKey(episode.URL, episodeNum, anilistID)
 	util.Debugf("Tracking lookup: anilistID=%d, key=%s", anilistID, key)
 
 	// Try episode-specific key first
@@ -889,8 +929,11 @@ func initTracking(anilistID int, episode *models.Episode, episodeNum int) (resul
 		return tracker, 0
 	}
 
-	// Fallback: try legacy key (without episode number) for backward compatibility
+	// Fallback through both prior key formats for backward compatibility.
 	if progress == nil {
+		progress, err = tracker.GetAnime(anilistID, trackingKey(episode.URL, episodeNum))
+	}
+	if progress == nil && err == nil {
 		progress, err = tracker.GetAnime(anilistID, episode.URL)
 		if err != nil {
 			util.Debugf("Tracking legacy lookup error: %v", err)
@@ -940,6 +983,21 @@ func InitTrackerAsync() {
 			tracking.NewLocalTracker(dbPath)
 		}
 	}()
+}
+
+// GetTracker returns the shared local tracker, initializing it when needed.
+// Interactive screens use the same connection as playback.
+func GetTracker() *tracking.LocalTracker {
+	if !tracking.IsCgoEnabled {
+		return nil
+	}
+	if tracker := tracking.GetGlobalTracker(); tracker != nil {
+		return tracker
+	}
+	if dbPath := getTrackerDBPath(); dbPath != "" {
+		return tracking.NewLocalTracker(dbPath)
+	}
+	return nil
 }
 
 // aniSkipFetcher is the function used to fetch AniSkip skip-times data.
@@ -1067,14 +1125,7 @@ func updateEpisodeDuration(socketPath string, updater *discord.RichPresenceUpdat
 // updateTrackingWithDuration updates the local tracker with episode info and duration
 func updateTrackingWithDuration(tracker *tracking.LocalTracker, anilistID int, episode *models.Episode, episodeNum int, dur time.Duration) {
 	if tracker != nil && dur > 0 {
-		anime := tracking.Anime{
-			AnilistID:     anilistID,
-			AllanimeID:    episode.URL,
-			EpisodeNumber: episodeNum,
-			Duration:      int(dur.Seconds()),
-			Title:         getEpisodeTitle(episode.Title),
-			LastUpdated:   time.Now(),
-		}
+		anime := trackingRecord(anilistID, episode, episodeNum, 0, int(dur.Seconds()))
 		if err := tracker.UpdateProgress(anime); err != nil {
 			util.Errorf("Failed to update tracking: %v", err)
 		}
@@ -1226,15 +1277,7 @@ func updateTracking(tracker *tracking.LocalTracker, socketPath string, anilistID
 		duration = 1440 // Fallback to default
 	}
 
-	anime := tracking.Anime{
-		AnilistID:     anilistID,
-		AllanimeID:    trackingKey(episode.URL, episodeNum),
-		EpisodeNumber: episodeNum,
-		PlaybackTime:  int(position),
-		Duration:      duration,
-		Title:         getEpisodeTitle(episode.Title),
-		LastUpdated:   time.Now(),
-	}
+	anime := trackingRecord(anilistID, episode, episodeNum, int(position), duration)
 
 	if err := tracker.UpdateProgress(anime); err != nil {
 		util.Errorf("Error updating tracking: %v", err)
@@ -1243,6 +1286,11 @@ func updateTracking(tracker *tracking.LocalTracker, socketPath string, anilistID
 
 // showPlayerMenu displays an interactive menu for player controls
 func showPlayerMenu(animeName string, currentEpisodeNum int) (string, error) {
+	choice, _, err := showPlayerMenuWithEvents(animeName, currentEpisodeNum, nil)
+	return choice, err
+}
+
+func showPlayerMenuWithEvents(animeName string, currentEpisodeNum int, events <-chan string) (string, string, error) {
 
 	// Build title and options based on media type
 	var title string
@@ -1286,24 +1334,31 @@ func showPlayerMenu(animeName string, currentEpisodeNum int) (string, error) {
 	for i, it := range menuItems {
 		labels[i] = it.Label
 	}
-	idx, err := tui.PickLabels(labels, tui.PickOptions{
+	items := make([]tui.PickItem, len(labels))
+	for i, label := range labels {
+		items[i] = tui.PickItem{Label: label}
+	}
+	result, err := tui.PickAction(items, tui.PickOptions{
 		Breadcrumb:   tui.SingleLine(title),
 		WindowTitle:  "GonimeId - Player",
 		ItemSingular: "option",
 		ItemPlural:   "options",
+		External:     events,
 	})
 
 	if err != nil {
 		if errors.Is(err, tui.ErrPickBack) {
-			return "download_options", nil
+			return "download_options", "", nil
 		}
 		if errors.Is(err, tui.ErrPickCancelled) {
-			return "quit", nil
+			return "quit", "", nil
 		}
-		return "", fmt.Errorf("error showing menu: %w", err)
+		return "", "", fmt.Errorf("error showing menu: %w", err)
 	}
-
-	return menuItems[idx].Value, nil
+	if result.Event != "" {
+		return "", result.Event, nil
+	}
+	return menuItems[result.Index].Value, "", nil
 }
 
 // handleUserInput manages user input
@@ -1318,6 +1373,21 @@ func handleUserInput(
 	stopTracking chan struct{},
 	currentEpisode *models.Episode,
 ) error {
+	return handleUserInputWithEvents(socketPath, episodes, currentIndex, currentEpisodeNum, malID, anilistID, updater, stopTracking, currentEpisode, nil)
+}
+
+func handleUserInputWithEvents(
+	socketPath string,
+	episodes []models.Episode,
+	currentIndex int,
+	currentEpisodeNum int,
+	malID int,
+	anilistID int,
+	updater *discord.RichPresenceUpdater,
+	stopTracking chan struct{},
+	currentEpisode *models.Episode,
+	events <-chan string,
+) error {
 	// Get anime name for display
 	var animeName string
 	if updater != nil && updater.GetAnime() != nil {
@@ -1328,18 +1398,27 @@ func handleUserInput(
 		// Check if mpv is still running before showing the menu.
 		// If mpv exited (e.g., due to a bad URL), quit gracefully instead of
 		// showing a menu that the user cannot meaningfully interact with.
-		if _, pingErr := mpvSendCommand(socketPath, []any{"get_property", "pid"}); pingErr != nil {
-			util.Debugf("mpv process appears to have exited, returning to caller")
-			return ErrBackToDownloadOptions
+		if events == nil {
+			if _, pingErr := mpvSendCommand(socketPath, []any{"get_property", "pid"}); pingErr != nil {
+				util.Debugf("mpv process appears to have exited, returning to caller")
+				return ErrBackToDownloadOptions
+			}
 		}
 
-		choice, err := showPlayerMenu(animeName, currentEpisodeNum)
+		choice, playbackEnd, err := showPlayerMenuWithEvents(animeName, currentEpisodeNum, events)
 		if err != nil {
 			// If the menu was disrupted (e.g., by a concurrent terminal writer),
 			// treat it as "go back" rather than a fatal error.
 			util.Debugf("Player menu interrupted: %v", err)
 			_, _ = mpvSendCommand(socketPath, []any{"quit"})
 			return ErrBackToDownloadOptions
+		}
+		if playbackEnd != "" {
+			autoplay := true
+			if tracker := GetTracker(); tracker != nil {
+				autoplay = tracker.Autoplay()
+			}
+			return handlePlaybackEnd(playbackEnd, episodes, currentIndex, currentEpisodeNum, malID, anilistID, updater, stopTracking, socketPath, currentEpisode, autoplay, tui.AutoplayCountdown)
 		}
 
 		switch choice {
@@ -1375,6 +1454,89 @@ func handleUserInput(
 	}
 }
 
+func handlePlaybackEnd(
+	reason string,
+	episodes []models.Episode,
+	currentIndex, currentEpisodeNum, malID, anilistID int,
+	updater *discord.RichPresenceUpdater,
+	stopTracking chan struct{},
+	socketPath string,
+	currentEpisode *models.Episode,
+	autoplay bool,
+	countdown func(string, int) (bool, error),
+) error {
+	if reason != "eof" {
+		return ErrPlaybackFinished
+	}
+	markEpisodeCompleted(anilistID, currentEpisode, currentEpisodeNum)
+	if currentIndex+1 >= len(episodes) {
+		util.Info("Series complete")
+		return ErrPlaybackFinished
+	}
+	if !autoplay {
+		return ErrPlaybackFinished
+	}
+	nextNum := currentEpisodeNum + 1
+	if parsed, err := strconv.Atoi(ExtractEpisodeNumber(episodes[currentIndex+1].Number)); err == nil {
+		nextNum = parsed
+	}
+	advance, err := countdown(fmt.Sprintf("Episode %d", nextNum), 5)
+	if err != nil || !advance {
+		return ErrPlaybackFinished
+	}
+	return playNextEpisode(currentIndex+1, episodes, malID, anilistID, updater, stopTracking, socketPath)
+}
+
+func watchMPVEnd(socketPath string) <-chan string {
+	events := make(chan string, 1)
+	go func() {
+		defer close(events)
+		conn, err := dialMPVSocket(socketPath)
+		if err != nil {
+			events <- "disconnected"
+			return
+		}
+		defer func() { _ = conn.Close() }()
+		decoder := json.NewDecoder(conn)
+		for {
+			var message struct {
+				Event  string `json:"event"`
+				Reason string `json:"reason"`
+			}
+			if err := decoder.Decode(&message); err != nil {
+				events <- "disconnected"
+				return
+			}
+			if message.Event == "end-file" {
+				events <- message.Reason
+				return
+			}
+		}
+	}()
+	return events
+}
+
+func markEpisodeCompleted(anilistID int, episode *models.Episode, episodeNum int) {
+	tracker := GetTracker()
+	if tracker == nil || episode == nil {
+		return
+	}
+	key := episodeTrackingKey(episode.URL, episodeNum, anilistID)
+	record, err := tracker.GetAnime(anilistID, key)
+	if err != nil || record == nil {
+		duration := episode.Duration
+		created := trackingRecord(anilistID, episode, episodeNum, duration, duration)
+		record = &created
+	} else if record.Duration > 0 {
+		record.PlaybackTime = record.Duration
+	}
+	record.Completed = true
+	record.LastUpdated = time.Now()
+	if err := tracker.SetCompleted(*record, true); err != nil {
+		util.Warnf("Could not mark episode complete: %v", err)
+	}
+}
+
 // playNextEpisode plays next episode
 func playNextEpisode(newIndex int, episodes []models.Episode, malID, anilistID int, updater *discord.RichPresenceUpdater, stopTracking chan struct{}, socketPath string) error {
 	if newIndex >= len(episodes) {
@@ -1404,18 +1566,18 @@ func selectEpisode(episodes []models.Episode, malID, anilistID int, updater *dis
 		return fmt.Errorf("failed to select episode: %w", err)
 	}
 
-	if idx := findSelectedEpisodeIndex(episodes, selectedURL, selectedNumStr); idx >= 0 {
+	if idx := FindSelectedEpisodeIndex(episodes, selectedURL, selectedNumStr); idx >= 0 {
 		return switchEpisode(idx, episodes, malID, anilistID, updater, stopTracking, socketPath)
 	}
 
 	return fmt.Errorf("episode %s not found", selectedNumStr)
 }
 
-// findSelectedEpisodeIndex resolves a fuzzy-finder selection to a slice index.
+// FindSelectedEpisodeIndex resolves a fuzzy-finder selection to a slice index.
 // The episode number is matched before the URL because some sources
 // use the anime ID as the URL of every episode, so a URL-only match always
 // resolved to the first episode regardless of what the user picked.
-func findSelectedEpisodeIndex(episodes []models.Episode, url, numStr string) int {
+func FindSelectedEpisodeIndex(episodes []models.Episode, url, numStr string) int {
 	for i := range episodes {
 		if episodes[i].Number == numStr && episodes[i].URL == url {
 			return i

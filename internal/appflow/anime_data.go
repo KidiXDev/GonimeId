@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/KidiXDev/GonimeId/internal/api"
@@ -125,7 +126,18 @@ func (s *SearchSession) Reset() {
 // SearchWithRetry reopens cached results when available, otherwise searches
 // providers and retains the returned list for Back navigation.
 func (s *SearchSession) SearchWithRetry(name string) (*models.Anime, error) {
-	currentName := name
+	currentName := strings.TrimSpace(name)
+	if currentName == "" {
+		var err error
+		currentName, err = promptForNameFn("")
+		currentName = strings.TrimSpace(currentName)
+		if err != nil || currentName == "" {
+			if err == nil {
+				err = errors.New("search query cannot be empty")
+			}
+			return nil, err
+		}
+	}
 
 	for {
 		searchStart := time.Now()

@@ -69,7 +69,7 @@ func ShowBeautifulHelp() {
 	// Program title
 	helpContent.WriteString(titleStyle.Render("GonimeId - Anime Sub Indo dari Terminal"))
 	helpContent.WriteString("\n")
-	helpContent.WriteString(subtitleStyle.Render("Search, stream and download Indonesian-subtitled anime (Otakudesu, Samehadaku, Nimegami, YLnime) with mpv."))
+	helpContent.WriteString(subtitleStyle.Render("Search, stream and download Indonesian-subtitled anime (Otakudesu, Samehadaku, Nimegami, YLnime, Moenime, Astronime) with mpv."))
 	helpContent.WriteString("\n\n")
 
 	// Usage section
@@ -79,7 +79,7 @@ func ShowBeautifulHelp() {
 	helpContent.WriteString("\n")
 	helpContent.WriteString(commandStyle.Render("  gonimeid"))
 	helpContent.WriteString("\n")
-	helpContent.WriteString(descriptionStyle.Render("    Interactive mode - search and select anime from a beautiful menu"))
+	helpContent.WriteString(descriptionStyle.Render("    Open the watch hub to continue watching, browse recent titles, or search"))
 	helpContent.WriteString("\n")
 	helpContent.WriteString(commandStyle.Render("  gonimeid "))
 	helpContent.WriteString(parameterStyle.Render("[options]"))
@@ -107,7 +107,7 @@ func ShowBeautifulHelp() {
 	addOption(&helpContent, "-d", "Download mode - download specific episodes for offline viewing.")
 	addOption(&helpContent, "-r", "Range download mode - download multiple episodes (use with -d).")
 	addOption(&helpContent, "-a", "Download ALL episodes (use with -d).")
-	addOption(&helpContent, "--source", "Search one source only: otakudesu, samehadaku, nimegami or ylnime. Default: all.")
+	addOption(&helpContent, "--source", "Search one source only: otakudesu, samehadaku, nimegami, ylnime, moenime or astronime. Default: all.")
 	addOption(&helpContent, "--quality", "Default download quality (1080p, 720p, 480p, 360p). Interactive playback always asks per source.")
 	addOption(&helpContent, "-o", "Output directory for downloads (default: ~/.local/gonimeid/downloads/anime/). Files use Plex naming: Anime - S01E01.mp4.")
 	helpContent.WriteString("\n")
@@ -134,13 +134,15 @@ func ShowBeautifulHelp() {
 	helpContent.WriteString(sectionTitleStyle.Render("Features:"))
 	helpContent.WriteString("\n")
 
-	addFeature(&helpContent, "Indonesian Sources", "Otakudesu, Samehadaku, Nimegami and YLnime, searched together; dead mirrors are skipped automatically.")
+	addFeature(&helpContent, "Indonesian Sources", "Otakudesu, Samehadaku, Nimegami, YLnime, Moenime and Astronime, searched together; dead mirrors are skipped automatically.")
 	addFeature(&helpContent, "Smart Search", "Intelligent search with fuzzy matching and suggestions.")
 	addFeature(&helpContent, "Quality Selection", "Pick a resolution before every interactive playback; higher-quality download files are preferred over streaming mirrors.")
 	addFeature(&helpContent, "Batch Downloads", "Download single episodes, ranges, or entire seasons for offline viewing.")
 	addFeature(&helpContent, "Interactive Controls", "Beautiful terminal interface with keyboard navigation.")
 	addFeature(&helpContent, "Discord Rich Presence", "Show your friends what you're watching.")
 	addFeature(&helpContent, "Progress Tracking", "Keep track of your watch progress and episode history.")
+	addFeature(&helpContent, "Watch Hub", "Continue recent series, inspect episode progress, mark completion, and manage local history.")
+	addFeature(&helpContent, "Autoplay", "Start the next episode after a cancellable five-second countdown; the preference is remembered.")
 	addFeature(&helpContent, "Skip Intros", "Automatically skip anime intros and outros.")
 	addFeature(&helpContent, "Anime4K Upscaling", "Enhance video and image quality using the Anime4K algorithm.")
 	helpContent.WriteString("\n")

@@ -56,6 +56,8 @@ func TestSearchAnimeEnhancedCore_ResultScreenCascade(t *testing.T) {
 			{src: " Samehadaku ", want: []source.SourceKind{source.Samehadaku}},
 			{src: "nimegami", want: []source.SourceKind{source.Nimegami}},
 			{src: "ylnime", want: []source.SourceKind{source.Ylnime}},
+			{src: "moenime", want: []source.SourceKind{source.Moenime}},
+			{src: "astronime", want: []source.SourceKind{source.Astronime}},
 			{src: "unknown", want: nil},
 			{src: "", want: nil},
 		}

@@ -22,6 +22,8 @@ type Shell struct {
 	Height     int
 	// Logs shows the session log overlay in place of the body (ctrl+l).
 	Logs bool
+	// CompactFooter overrides the generic picker legend on narrow screens.
+	CompactFooter string
 }
 
 // noticeWindow is how long a WARN/ERROR stays in the footer after it happened.
@@ -88,17 +90,21 @@ func (s *Shell) Render(body, footer string) string {
 	}
 
 	if width < 50 {
-		switch {
-		case width >= 36:
-			footer = "type fzf  ↑↓/jk  enter  esc"
-		case width >= 24:
-			footer = "type  ↑↓  enter  esc"
-		case width >= 12:
-			footer = "type  enter  esc"
-		case width >= 8:
-			footer = "esc back"
-		default:
-			footer = "esc"
+		if s.CompactFooter != "" {
+			footer = s.CompactFooter
+		} else {
+			switch {
+			case width >= 36:
+				footer = "type fzf  ↑↓/jk  enter  esc"
+			case width >= 24:
+				footer = "type  ↑↓  enter  esc"
+			case width >= 12:
+				footer = "type  enter  esc"
+			case width >= 8:
+				footer = "esc back"
+			default:
+				footer = "esc"
+			}
 		}
 	}
 	separator := s.Theme.Border.Render(strings.Repeat("─", width))

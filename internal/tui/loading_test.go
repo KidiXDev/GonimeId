@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 	"github.com/stretchr/testify/require"
 )
@@ -19,6 +20,16 @@ func TestLoadingSkipsFastWork(t *testing.T) {
 	})
 	require.ErrorIs(t, err, want)
 	require.Equal(t, 1, calls)
+}
+
+func TestLoadingAnimationUsesOneSmoothCadence(t *testing.T) {
+	m := newLoadingModel("Search", "Loading", func() {}, make(chan error))
+	require.GreaterOrEqual(t, len(m.spin.Spinner.Frames), 8)
+	require.LessOrEqual(t, m.spin.Spinner.FPS, 100*time.Millisecond)
+
+	next := m.now.Add(m.spin.Spinner.FPS)
+	m.Update(spinner.TickMsg{Time: next, ID: m.spin.ID()})
+	require.Equal(t, next, m.now)
 }
 
 func TestLoadingRendererExitAfterResultConsumed(t *testing.T) {

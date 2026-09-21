@@ -13,6 +13,8 @@ const (
 	Samehadaku SourceKind = "Samehadaku"
 	Nimegami   SourceKind = "Nimegami"
 	Ylnime     SourceKind = "YLnime"
+	Moenime    SourceKind = "Moenime"
+	Astronime  SourceKind = "Astronime"
 
 	// Unknown is returned when no definition matches. It is surfaced with a
 	// warning rather than guessed at.
@@ -31,4 +33,6 @@ var scraperTypeMap = map[SourceKind]scraper.ScraperType{
 	Samehadaku: scraper.SamehadakuType,
 	Nimegami:   scraper.NimegamiType,
 	Ylnime:     scraper.YlnimeType,
+	Moenime:    scraper.MoenimeType,
+	Astronime:  scraper.AstronimeType,
 }

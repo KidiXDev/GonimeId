@@ -7,7 +7,7 @@
 # GonimeId
 
 GonimeId is a terminal app (TUI) for watching and downloading **Indonesian-subtitled anime** in mpv.
-Search once, pick a title, pick an episode, pick a resolution — it plays.
+Open the watch hub to continue a series, or search and play a title directly.
 
 ## Sources
 
@@ -17,15 +17,20 @@ Search once, pick a title, pick an episode, pick a resolution — it plays.
 | [Samehadaku](https://v2.samehadaku.how) | 360p – 1080p | Pixeldrain servers, Blogspot fallback                                                 |
 | [Nimegami](https://nimegami.id)         | 360p – 1080p | Direct berkasdrive files; one page per season                                         |
 | [YLnime](https://ylnime.com)            | 360p – 1080p | Direct MP4/HLS mirrors                                                                |
+| [Moenime](https://moenime.com)          | 240p – 720p  | Moeclip players with short-lived signed MP4 links                                     |
+| [Astronime](https://astronime.id)        | 480p – 1080p | Hydrax players with direct MP4 streams                                                  |
 
-All four are searched together by default. Dead or geo-locked files are probed and
+All six are searched together by default. Dead or geo-locked files are probed and
 skipped before anything reaches mpv.
 
 ## Features
 
 - Search across all sources, one picker
+- Continue Watching and series-first recent history with episode progress markers
+- Automatic completion at 90%, manual completion toggles, and resume tracking
+- Cancellable five-second autoplay countdown for the next episode
 - Resolution picker (remembered for the session) or `--quality 1080p`
-- Play in mpv with skip-intro/outro (AniSkip) and resume tracking (SQLite build)
+- Play in mpv with skip-intro/outro (AniSkip)
 - Download single episodes, ranges, or everything — Plex/Jellyfin folder naming
 - Real-time Anime4K upscaling in mpv
 - Discord Rich Presence
@@ -65,9 +70,9 @@ With watch-progress tracking (needs SQLite headers): `cd build && ./buildlinux-w
 ## Usage
 
 ```bash
-gonimeid                       # interactive: search → title → episode → quality → play
+gonimeid                       # watch hub: continue, recent history, or search
 gonimeid "one piece"           # search directly (use spaces, not hyphens)
-gonimeid --source nimegami "frieren"    # otakudesu | samehadaku | nimegami | ylnime
+gonimeid --source nimegami "frieren"    # otakudesu | samehadaku | nimegami | ylnime | moenime | astronime
 gonimeid --quality 1080p "frieren"       # download default; playback still asks per source
 
 gonimeid -d "one piece" 1      # download episode 1
@@ -80,7 +85,9 @@ gonimeid --update              # self-update from GitHub releases
 gonimeid --help
 ```
 
-In the play menu, **Play** is the first item; Esc goes back one step everywhere.
+Watch hub keys: `←/→` switch Continue and Recent, `s` searches, `a` toggles
+autoplay, `m` toggles episode completion, `d` removes one title, and `D` clears
+history after confirmation. Esc goes back one step everywhere.
 
 ### Environment
 

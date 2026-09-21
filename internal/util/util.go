@@ -478,7 +478,7 @@ func FlagParser() (string, error) {
 	downloadFlag := fs.Bool("d", false, "download mode")
 	rangeFlag := fs.Bool("r", false, "download episode range (use with -d)")
 	allFlag := fs.Bool("a", false, "download ALL episodes (use with -d)")
-	sourceFlag := fs.String("source", "", "specify source (otakudesu, samehadaku, nimegami, ylnime); default: search all")
+	sourceFlag := fs.String("source", "", "specify source (otakudesu, samehadaku, nimegami, ylnime, moenime, astronime); default: search all")
 	qualityFlag := fs.String("quality", "best", "default download quality; interactive playback always asks per source")
 	outputDirFlag := fs.String("o", "", "output directory for downloads (default: ~/.local/gonimeid/downloads/anime/)")
 
@@ -575,8 +575,12 @@ func FlagParser() (string, error) {
 		}
 		return TreatingAnimeName(animeName), nil
 	}
-	animeName, err := getUserInput("Search anime")
-	return TreatingAnimeName(animeName), err
+	// No title means interactive watch-hub mode. Search remains available from
+	// the hub, while explicit title arguments keep the direct-search fast path.
+	if !term.IsTerminal(os.Stdin.Fd()) {
+		return "", errors.New("no anime name entered (no interactive terminal available?)")
+	}
+	return "", nil
 }
 
 // getUserInput asks for the anime name on a full shell screen (alt screen, so

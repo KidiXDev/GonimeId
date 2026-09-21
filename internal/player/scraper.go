@@ -283,7 +283,102 @@ type episodePickFunc func([]tui.PickItem, tui.PickOptions) (int, error)
 // SelectEpisodeWithFuzzyFinder lets the user pick an episode on the styled
 // fuzzy picker. ESC (or quit) is reported as ErrBackRequested.
 func SelectEpisodeWithFuzzyFinder(episodes []models.Episode) (episodeURL, episodeNumber string, err error) {
-	return selectEpisodeWithPicker(tui.Pick, episodes)
+	if len(episodes) == 0 {
+		return "", "", errors.New("no episodes provided")
+	}
+	selected := 0
+	tracker := GetTracker()
+	for {
+		items := addEpisodeProgress(episodePickItems(episodes), episodes)
+		opts := tui.PickOptions{
+			Breadcrumb: "Results › Episodes", WindowTitle: "GonimeId - Episodes",
+			ItemSingular: "episode", ItemPlural: "episodes", InitialIndex: selected,
+		}
+		if tracker != nil {
+			opts.ToggleKey, opts.ToggleLabel = "m", "toggle complete"
+		}
+		result, pickErr := tui.PickAction(items, opts)
+		if pickErr != nil {
+			if errors.Is(pickErr, tui.ErrPickBack) || errors.Is(pickErr, tui.ErrPickCancelled) {
+				return "", "", ErrBackRequested
+			}
+			return "", "", fmt.Errorf("failed to select episode: %w", pickErr)
+		}
+		if result.Index < 0 || result.Index >= len(episodes) {
+			return "", "", errors.New("invalid index returned by episode picker")
+		}
+		selected = result.Index
+		if result.Toggled {
+			toggleEpisodeCompletion(&episodes[selected])
+			continue
+		}
+		return episodes[selected].URL, episodes[selected].Number, nil
+	}
+}
+
+func addEpisodeProgress(items []tui.PickItem, episodes []models.Episode) []tui.PickItem {
+	tracker := GetTracker()
+	if tracker == nil {
+		return items
+	}
+	snap := snapshotMedia()
+	anilistID := 0
+	if snap.Meta != nil {
+		anilistID = snap.Meta.AnilistID
+	}
+	for i, episode := range episodes {
+		num, err := strconv.Atoi(ExtractEpisodeNumber(episode.Number))
+		if err != nil {
+			continue
+		}
+		progress, err := tracker.GetAnime(anilistID, episodeTrackingKey(episode.URL, num, anilistID))
+		if err != nil || progress == nil {
+			continue
+		}
+		if progress.Completed {
+			items[i].Label += " ✓"
+			items[i].Success = true
+			continue
+		}
+		status := "Not started"
+		if percent := progress.ProgressPercent(); percent > 0 {
+			status = fmt.Sprintf("%d%% watched", percent)
+		}
+		if items[i].Details == "" {
+			items[i].Details = status
+		} else {
+			items[i].Details += "  •  " + status
+		}
+	}
+	return items
+}
+
+func toggleEpisodeCompletion(episode *models.Episode) {
+	tracker := GetTracker()
+	if tracker == nil || episode == nil {
+		return
+	}
+	snap := snapshotMedia()
+	anilistID := 0
+	if snap.Meta != nil {
+		anilistID = snap.Meta.AnilistID
+	}
+	num, err := strconv.Atoi(ExtractEpisodeNumber(episode.Number))
+	if err != nil {
+		return
+	}
+	key := episodeTrackingKey(episode.URL, num, anilistID)
+	record, err := tracker.GetAnime(anilistID, key)
+	if err != nil {
+		return
+	}
+	if record == nil {
+		created := trackingRecord(anilistID, episode, num, 0, max(episode.Duration, 0))
+		record = &created
+	}
+	if err := tracker.SetCompleted(*record, !record.Completed); err != nil {
+		util.Warnf("Could not update completion: %v", err)
+	}
 }
 
 // selectEpisodeWithPicker isolates picker execution for deterministic tests.
