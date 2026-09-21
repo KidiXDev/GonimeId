@@ -102,7 +102,7 @@ func TestUpdateTrackingWithDuration_PersistsAnilistIDNotMalID(t *testing.T) {
 
 	updateTrackingWithDuration(tracker, bugReportAnilistID, episode, epNum, 24*time.Minute)
 
-	row := readStoredRow(t, tracker, episode.URL)
+	row := readStoredRow(t, tracker, episodeTrackingKey(episode.URL, epNum, bugReportAnilistID))
 	require.NotNil(t, row, "expected a row in tracker DB after updateTrackingWithDuration; got none")
 
 	if row.AnilistID != bugReportAnilistID {
@@ -195,7 +195,7 @@ func TestIDRouting_FullContract_NoConflation(t *testing.T) {
 		t.Errorf("AniSkip fetcher received id=%d, want MAL=%d", aniSkipGot, bugReportMalID)
 	}
 
-	row := readStoredRow(t, tracker, episode.URL)
+	row := readStoredRow(t, tracker, episodeTrackingKey(episode.URL, epNum, bugReportAnilistID))
 	require.NotNil(t, row, "tracker has no row for episode after updateTrackingWithDuration")
 	if row.AnilistID != bugReportAnilistID {
 		t.Errorf("tracker stored anilist_id=%d, want %d", row.AnilistID, bugReportAnilistID)
@@ -226,7 +226,7 @@ func TestIDRouting_ZeroAnilistID_DoesNotFallbackToMalID(t *testing.T) {
 
 	updateTrackingWithDuration(tracker, 0, episode, epNum, 24*time.Minute)
 
-	row := readStoredRow(t, tracker, episode.URL)
+	row := readStoredRow(t, tracker, episodeTrackingKey(episode.URL, epNum, 0))
 	require.NotNil(t, row, "expected stored row even when anilistID is 0")
 	if row.AnilistID != 0 {
 		t.Errorf("anilist_id = %d, want 0 (no silent fallback to MAL)", row.AnilistID)

@@ -28,8 +28,6 @@ func busy(run func() error) error {
 // loadingDoneMsg carries the work's result back into the program.
 type loadingDoneMsg struct{ err error }
 
-type tickMsg time.Time
-
 type loadingModel struct {
 	shell   Shell
 	theme   Theme
@@ -46,7 +44,7 @@ type loadingModel struct {
 
 func newLoadingModel(breadcrumb, title string, cancel context.CancelFunc, result <-chan error) *loadingModel {
 	theme := NewTheme(true)
-	sp := spinner.New(spinner.WithSpinner(spinner.Points), spinner.WithStyle(theme.Primary))
+	sp := spinner.New(spinner.WithSpinner(spinner.MiniDot), spinner.WithStyle(theme.Primary))
 	now := time.Now()
 	return &loadingModel{
 		shell:   NewShell(&theme, singleLine(breadcrumb)),
@@ -61,11 +59,7 @@ func newLoadingModel(breadcrumb, title string, cancel context.CancelFunc, result
 }
 
 func (m *loadingModel) Init() tea.Cmd {
-	return tea.Batch(m.spin.Tick, m.await(), tick())
-}
-
-func tick() tea.Cmd {
-	return tea.Tick(200*time.Millisecond, func(t time.Time) tea.Msg { return tickMsg(t) })
+	return tea.Batch(m.spin.Tick, m.await())
 }
 
 func (m *loadingModel) await() tea.Cmd {
@@ -81,9 +75,8 @@ func (m *loadingModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case loadingDoneMsg:
 		m.done, m.err = true, msg.err
 		return m, tea.Quit
-	case tickMsg:
-		m.now = time.Time(msg)
-		return m, tick()
+	case spinner.TickMsg:
+		m.now = msg.Time
 	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "ctrl+c", "esc", "q":

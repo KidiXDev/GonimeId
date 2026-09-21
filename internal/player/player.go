@@ -57,14 +57,16 @@ func PreWarmMPVPath() {
 // concurrent goroutines (batch downloads, etc.) can safely read while the main
 // flow writes.
 type mediaState struct {
-	mu          sync.RWMutex
-	animeURL    string
-	animeName   string
-	animeSeason int
-	isMovieOrTV bool
-	mediaType   string                   // "movie", "tv", or "anime"
-	seasonMap   []metadata.SeasonMapping // AniList-based absolute→season map
-	meta        *util.MediaMeta          // External IDs and year for folder naming
+	mu            sync.RWMutex
+	animeURL      string
+	animeName     string
+	animeSource   string
+	totalEpisodes int
+	animeSeason   int
+	isMovieOrTV   bool
+	mediaType     string                   // "movie", "tv", or "anime"
+	seasonMap     []metadata.SeasonMapping // AniList-based absolute→season map
+	meta          *util.MediaMeta          // External IDs and year for folder naming
 }
 
 var gMedia mediaState
@@ -117,6 +119,18 @@ func setLastAnimeURL(u string) {
 	gMedia.animeURL = u
 }
 
+func setAnimeSource(source string) {
+	gMedia.mu.Lock()
+	defer gMedia.mu.Unlock()
+	gMedia.animeSource = source
+}
+
+func setTotalEpisodes(total int) {
+	gMedia.mu.Lock()
+	defer gMedia.mu.Unlock()
+	gMedia.totalEpisodes = max(total, 0)
+}
+
 // getLastAnimeURL returns the stored anime URL.
 func getLastAnimeURL() string {
 	gMedia.mu.RLock()
@@ -128,13 +142,15 @@ func getLastAnimeURL() string {
 // atomically under a single RLock so batch-download goroutines always see a
 // consistent view of the state.
 type mediaSnapshot struct {
-	AnimeName   string
-	AnimeSeason int
-	IsMovieOrTV bool
-	MediaType   string
-	AnimeURL    string
-	SeasonMap   []metadata.SeasonMapping
-	Meta        *util.MediaMeta // External IDs and year for folder naming
+	AnimeName     string
+	AnimeSeason   int
+	IsMovieOrTV   bool
+	MediaType     string
+	AnimeURL      string
+	AnimeSource   string
+	TotalEpisodes int
+	SeasonMap     []metadata.SeasonMapping
+	Meta          *util.MediaMeta // External IDs and year for folder naming
 }
 
 // snapshotMedia returns a consistent point-in-time copy of the global media state.
@@ -142,13 +158,15 @@ func snapshotMedia() mediaSnapshot {
 	gMedia.mu.RLock()
 	defer gMedia.mu.RUnlock()
 	return mediaSnapshot{
-		AnimeName:   gMedia.animeName,
-		AnimeSeason: gMedia.animeSeason,
-		IsMovieOrTV: gMedia.isMovieOrTV,
-		MediaType:   gMedia.mediaType,
-		AnimeURL:    gMedia.animeURL,
-		SeasonMap:   append([]metadata.SeasonMapping(nil), gMedia.seasonMap...),
-		Meta:        cloneMediaMeta(gMedia.meta),
+		AnimeName:     gMedia.animeName,
+		AnimeSeason:   gMedia.animeSeason,
+		IsMovieOrTV:   gMedia.isMovieOrTV,
+		MediaType:     gMedia.mediaType,
+		AnimeURL:      gMedia.animeURL,
+		AnimeSource:   gMedia.animeSource,
+		TotalEpisodes: gMedia.totalEpisodes,
+		SeasonMap:     append([]metadata.SeasonMapping(nil), gMedia.seasonMap...),
+		Meta:          cloneMediaMeta(gMedia.meta),
 	}
 }
 
@@ -182,6 +200,23 @@ func GetMediaMeta() *util.MediaMeta {
 	defer gMedia.mu.RUnlock()
 	return cloneMediaMeta(gMedia.meta)
 }
+
+// SetTrackingMedia makes series identity available before episode selection
+// and regardless of whether Discord Rich Presence is enabled.
+func SetTrackingMedia(anime *models.Anime) {
+	if anime == nil {
+		return
+	}
+	setLastAnimeURL(anime.URL)
+	setAnimeSource(anime.Source)
+	setTotalEpisodes(0)
+	SetAnimeName(anime.Name, max(anime.CurrentSeason, 1))
+	SetExactMediaType(string(anime.MediaType))
+	SetMediaMeta(&util.MediaMeta{AnilistID: anime.AnilistID, MalID: anime.MalID})
+}
+
+// SetTrackingEpisodeCount records the known catalog size for completion UI.
+func SetTrackingEpisodeCount(total int) { setTotalEpisodes(total) }
 
 // resolveSeasonForEpisode returns the correct (season, episode) pair for an
 // absolute episode number using the AniList season map. Falls back to
@@ -783,6 +818,11 @@ func HandleDownloadAndPlay(
 
 	// Persist the anime URL/ID to aid episode switching when updater is nil (e.g., Discord disabled)
 	setLastAnimeURL(animeURL)
+	setTotalEpisodes(len(episodes))
+	if anime != nil {
+		setAnimeSource(anime.Source)
+		SetExactMediaType(string(anime.MediaType))
+	}
 
 	// Store anime name for Plex-compatible download file naming
 	if animeName != "" {
@@ -822,6 +862,9 @@ func HandleDownloadAndPlay(
 			if err != nil {
 				if errors.Is(err, ErrBackToDownloadOptions) {
 					continue // Go back to download options menu
+				}
+				if errors.Is(err, ErrPlaybackFinished) {
+					return nil
 				}
 				return err
 			}
@@ -932,6 +975,9 @@ func HandleDownloadAndPlay(
 			if err != nil {
 				if errors.Is(err, ErrBackToDownloadOptions) {
 					continue // Go back to download options menu
+				}
+				if errors.Is(err, ErrPlaybackFinished) {
+					return nil
 				}
 				return err
 			}

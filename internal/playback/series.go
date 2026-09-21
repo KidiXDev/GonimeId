@@ -22,7 +22,11 @@ func printEpisodeNotFoundMsg() {
 }
 
 func HandleSeries(ctx context.Context, anime *models.Anime, episodes []models.Episode, totalEpisodes int, discordEnabled bool) error {
-	if anime.IsTV() {
+	player.SetTrackingMedia(anime)
+	player.SetTrackingEpisodeCount(totalEpisodes)
+	if anime.IsMovie() {
+		util.Infof("The selected title has %d episode.\n", totalEpisodes)
+	} else if anime.IsTV() {
 		util.Infof("The selected TV show has %d episodes.\n", totalEpisodes)
 	} else {
 		util.Infof("The selected anime is a series with %d episodes.\n", totalEpisodes)
@@ -103,6 +107,8 @@ func HandleSeries(ctx context.Context, anime *models.Anime, episodes []models.Ep
 			// This avoids re-fetching episodes which would cause duplicate season selection for FlixHQ
 			newTotalEpisodes := len(newEpisodes)
 			totalEpisodes = newTotalEpisodes
+			player.SetTrackingMedia(newAnime)
+			player.SetTrackingEpisodeCount(newTotalEpisodes)
 			series := !newAnime.IsMovie() && newTotalEpisodes > 1
 
 			if !series {
@@ -162,6 +168,8 @@ func HandleSeries(ctx context.Context, anime *models.Anime, episodes []models.Ep
 			// This avoids re-fetching episodes which would cause duplicate season selection for FlixHQ
 			newTotalEpisodes := len(newEpisodes)
 			totalEpisodes = newTotalEpisodes
+			player.SetTrackingMedia(newAnime)
+			player.SetTrackingEpisodeCount(newTotalEpisodes)
 			series := !newAnime.IsMovie() && newTotalEpisodes > 1
 
 			if !series {

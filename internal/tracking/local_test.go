@@ -1,11 +1,103 @@
 package tracking
 
 import (
+	"database/sql"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 )
+
+func TestWatchHubProgressAndPreferences(t *testing.T) {
+	_ = CloseGlobalTracker()
+	tracker := NewLocalTracker(filepath.Join(t.TempDir(), "hub.db"))
+	if tracker == nil {
+		t.Skip("tracking unavailable")
+	}
+	t.Cleanup(func() { _ = CloseGlobalTracker() })
+
+	now := time.Now()
+	entries := []Anime{
+		{AllanimeID: "anilist:1:ep1", AnilistID: 1, SeriesKey: "anilist:1", SeriesURL: "show-1", SeriesTitle: "Show", Source: "source", EpisodeURL: "ep-1", TotalEpisodes: 2, EpisodeNumber: 1, PlaybackTime: 900, Duration: 1000, Completed: true, LastUpdated: now.Add(-time.Hour)},
+		{AllanimeID: "anilist:1:ep2", AnilistID: 1, SeriesKey: "anilist:1", SeriesURL: "show-1", SeriesTitle: "Show", Source: "source", EpisodeURL: "ep-2", TotalEpisodes: 2, EpisodeNumber: 2, PlaybackTime: 300, Duration: 1000, LastUpdated: now},
+	}
+	for _, entry := range entries {
+		if err := tracker.UpdateProgress(entry); err != nil {
+			t.Fatalf("UpdateProgress: %v", err)
+		}
+	}
+	all, err := tracker.GetAllAnime()
+	if err != nil {
+		t.Fatal(err)
+	}
+	series := GroupSeries(all)
+	if len(series) != 1 || series[0].ContinueEpisode != 2 {
+		t.Fatalf("unexpected grouped series: %+v", series)
+	}
+	if err := tracker.SetCompleted(entries[1], true); err != nil {
+		t.Fatal(err)
+	}
+	all, _ = tracker.GetAllAnime()
+	series = GroupSeries(all)
+	if len(series) != 1 || !series[0].Finished() {
+		t.Fatalf("completed series not recognized: %+v", series)
+	}
+	if err := tracker.SetAutoplay(false); err != nil || tracker.Autoplay() {
+		t.Fatalf("autoplay preference not persisted: err=%v enabled=%v", err, tracker.Autoplay())
+	}
+	if err := tracker.DeleteSeries("anilist:1"); err != nil {
+		t.Fatal(err)
+	}
+	all, _ = tracker.GetAllAnime()
+	if len(all) != 0 {
+		t.Fatalf("DeleteSeries left %d rows", len(all))
+	}
+	if err := tracker.UpdateProgress(entries[0]); err != nil {
+		t.Fatal(err)
+	}
+	if err := tracker.ClearHistory(); err != nil {
+		t.Fatal(err)
+	}
+	all, _ = tracker.GetAllAnime()
+	if len(all) != 0 || tracker.Autoplay() {
+		t.Fatalf("ClearHistory should preserve the autoplay preference, rows=%d autoplay=%v", len(all), tracker.Autoplay())
+	}
+}
+
+func TestMigrateLegacyMediaProgress(t *testing.T) {
+	if !IsCgoEnabled {
+		t.Skip("tracking unavailable")
+	}
+	_ = CloseGlobalTracker()
+	path := filepath.Join(t.TempDir(), "legacy.db")
+	db, err := sql.Open("sqlite3", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.Exec(`CREATE TABLE media_progress (
+		allanime_id TEXT PRIMARY KEY NOT NULL, anilist_id INTEGER DEFAULT 0,
+		episode_number INTEGER NOT NULL, playback_time INTEGER NOT NULL,
+		duration INTEGER NOT NULL CHECK(duration > 0), title TEXT,
+		media_type TEXT DEFAULT 'anime', last_updated INTEGER NOT NULL
+	)`)
+	if err == nil {
+		_, err = db.Exec(`INSERT INTO media_progress VALUES('legacy:ep1', 7, 1, 950, 1000, 'Episode 1', 'anime', ?)`, time.Now().Unix())
+	}
+	_ = db.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tracker := NewLocalTracker(path)
+	if tracker == nil {
+		t.Skip("tracking unavailable")
+	}
+	t.Cleanup(func() { _ = CloseGlobalTracker() })
+	entry, err := tracker.GetAnime(7, "legacy:ep1")
+	if err != nil || entry == nil || !entry.Completed {
+		t.Fatalf("legacy progress migration failed: entry=%+v err=%v", entry, err)
+	}
+}
 
 func TestNewLocalTracker(t *testing.T) {
 	dir := t.TempDir()

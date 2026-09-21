@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 
@@ -19,6 +20,8 @@ import (
 	"github.com/KidiXDev/GonimeId/internal/version"
 	"github.com/charmbracelet/x/term"
 )
+
+var errSavedMediaUnavailable = errors.New("saved media is unavailable")
 
 // HandlePlaybackMode processes normal anime playback
 func HandlePlaybackMode(animeName string) {
@@ -71,81 +74,162 @@ func HandlePlaybackMode(animeName string) {
 
 	currentAnimeName := animeName
 	searchSession := &appflow.SearchSession{}
+	hubMode := animeName == ""
 
 	for {
-		// Use enhanced search with retry logic
-		searchTimer := util.StartTimer("SearchAnime:WithRetry")
-		anime, err := searchSession.SearchWithRetry(currentAnimeName)
-		searchTimer.Stop()
+		var anime *models.Anime
+		fromHistory := false
+		var err error
+
+		if hubMode && currentAnimeName == "" {
+			var search, quit bool
+			anime, search, quit = watchHubSelection()
+			if quit {
+				return
+			}
+			if !search && anime == nil {
+				continue
+			}
+			fromHistory = anime != nil
+		}
+
+		if anime == nil {
+			searchTimer := util.StartTimer("SearchAnime:WithRetry")
+			anime, err = searchSession.SearchWithRetry(currentAnimeName)
+			searchTimer.Stop()
+		}
 
 		if err != nil {
-			if !tui.IsCancelled(err) { // Esc at the prompt is a quiet quit
+			if hubMode && tui.IsCancelled(err) {
+				currentAnimeName = ""
+				continue
+			}
+			if !tui.IsCancelled(err) {
 				util.Errorf("Failed to search for anime: %v", err)
 			}
 			return
 		}
 
-		// Fetch details before episodes. Both operations access the same mutable
-		// Media, and some episode flows also open an interactive picker, so
-		// concurrent execution would race in memory and contend for the terminal.
-		var episodes []models.Episode
-		var epErr error
-
-		fetchTimer := util.StartTimer("FetchDetails+Episodes:Sequential")
-		detailsTimer := util.StartTimer("FetchAnimeDetails")
-		appflow.FetchAnimeDetails(anime)
-		detailsTimer.Stop()
-
-		episodesTimer := util.StartTimer("GetAnimeEpisodes")
-		episodes, epErr = appflow.GetAnimeEpisodes(anime)
-		if epErr != nil && !errors.Is(epErr, api.ErrBackToSearch) {
-			util.Errorf("Failed to get episodes: %v", epErr)
-		}
-		episodesTimer.Stop()
-		fetchTimer.Stop()
-
-		// User aborted season selection (FlixHQ/SuperFlix ESC) — go back to a
-		// fresh search prompt instead of killing the session.
-		if errors.Is(epErr, api.ErrBackToSearch) {
-			util.Infof("Going back to new search...")
-			searchSession.Reset()
+		playbackErr := playSelectedMedia(ctx, anime, discordManager.IsEnabled(), fromHistory)
+		if hubMode {
+			if fromHistory && errors.Is(playbackErr, errSavedMediaUnavailable) {
+				util.Warn("Saved source is unavailable; searching by title", "title", anime.Name)
+				currentAnimeName = util.TreatingAnimeName(anime.Name)
+				continue
+			}
 			currentAnimeName = ""
+			searchSession.Reset()
 			continue
 		}
 
-		if epErr != nil {
-			return
-		}
-
-		if len(episodes) == 0 {
-			util.Errorf("No episodes found for this anime. Try a different search.")
-			return
-		}
-
-		util.PerfCount("anime_loaded")
-
-		// Determine if this is a movie or series using the media type first,
-		// then fall back to episode count for anime sources that don't set media type.
-		totalEpisodes := len(episodes)
-		series := !anime.IsMovie() && totalEpisodes > 1
-		var playbackErr error
-
-		playbackTimer := util.StartTimer("Playback:Handle")
-		if series {
-			playbackErr = playback.HandleSeries(ctx, anime, episodes, totalEpisodes, discordManager.IsEnabled())
-		} else {
-			playbackErr = playback.HandleMovie(ctx, anime, episodes, discordManager.IsEnabled())
-		}
-		playbackTimer.Stop()
-
-		// Check if user wants to go back to anime selection
 		if errors.Is(playbackErr, player.ErrBackToAnimeSelection) {
 			util.Infof("Going back to anime selection...")
-			// SearchSession reopens the prior list immediately without refetching.
 			continue
 		}
-
-		// Normal exit or other errors
 		break
+	}
+}
+
+func playSelectedMedia(ctx context.Context, anime *models.Anime, discordEnabled, fromHistory bool) error {
+	var episodes []models.Episode
+	var epErr error
+	fetchTimer := util.StartTimer("FetchDetails+Episodes:Sequential")
+	detailsTimer := util.StartTimer("FetchAnimeDetails")
+	appflow.FetchAnimeDetails(anime)
+	detailsTimer.Stop()
+	episodesTimer := util.StartTimer("GetAnimeEpisodes")
+	episodes, epErr = appflow.GetAnimeEpisodes(anime)
+	if epErr != nil && !errors.Is(epErr, api.ErrBackToSearch) {
+		util.Errorf("Failed to get episodes: %v", epErr)
+	}
+	episodesTimer.Stop()
+	fetchTimer.Stop()
+	if errors.Is(epErr, api.ErrBackToSearch) {
+		return player.ErrBackToAnimeSelection
+	}
+	if epErr != nil {
+		return fmt.Errorf("%w: %v", errSavedMediaUnavailable, epErr)
+	}
+	if len(episodes) == 0 {
+		return fmt.Errorf("%w: no episodes found", errSavedMediaUnavailable)
+	}
+	util.PerfCount("anime_loaded")
+	totalEpisodes := len(episodes)
+	playbackTimer := util.StartTimer("Playback:Handle")
+	defer playbackTimer.Stop()
+	if useMovieEpisodeSelector(anime, fromHistory) {
+		return playback.HandleMovieWithEpisodeSelection(ctx, anime, episodes, discordEnabled)
+	}
+	if useEpisodeSelector(anime, totalEpisodes, fromHistory) {
+		return playback.HandleSeries(ctx, anime, episodes, totalEpisodes, discordEnabled)
+	}
+	return playback.HandleMovie(ctx, anime, episodes, discordEnabled)
+}
+
+func useEpisodeSelector(anime *models.Anime, totalEpisodes int, fromHistory bool) bool {
+	return !anime.IsMovie() && (fromHistory || totalEpisodes > 1)
+}
+
+func useMovieEpisodeSelector(anime *models.Anime, fromHistory bool) bool {
+	return fromHistory && anime.IsMovie()
+}
+
+func watchHubSelection() (anime *models.Anime, search, quit bool) {
+	tracker := player.GetTracker()
+	for {
+		var series []tracking.Series
+		autoplay := true
+		if tracker != nil {
+			entries, err := tracker.GetAllAnime()
+			if err != nil {
+				util.Warnf("Could not load watch history: %v", err)
+			} else {
+				series = tracking.GroupSeries(entries)
+			}
+			autoplay = tracker.Autoplay()
+		}
+
+		result, err := tui.RunHome(series, autoplay, tracker != nil)
+		if err != nil {
+			if !tui.IsCancelled(err) {
+				util.Warnf("Watch hub closed: %v", err)
+			}
+			return nil, false, true
+		}
+		switch result.Action {
+		case tui.HomeSearch:
+			return nil, true, false
+		case tui.HomeOpenSeries:
+			return mediaFromHistory(result.Series), false, false
+		case tui.HomeToggleAutoplay:
+			if tracker != nil {
+				if err := tracker.SetAutoplay(!autoplay); err != nil {
+					util.Warnf("Could not save autoplay preference: %v", err)
+				}
+			}
+		case tui.HomeDeleteSeries:
+			if tracker != nil {
+				confirmed, _ := tui.Confirm("Remove " + tui.SingleLine(result.Series.Title) + " from history?")
+				if confirmed {
+					_ = tracker.DeleteSeries(result.Series.Key)
+				}
+			}
+		case tui.HomeClearHistory:
+			if tracker != nil {
+				confirmed, _ := tui.Confirm("Clear all watch history?")
+				if confirmed {
+					_ = tracker.ClearHistory()
+				}
+			}
+		default:
+			return nil, false, true
+		}
+	}
+}
+
+func mediaFromHistory(series tracking.Series) *models.Anime {
+	return &models.Anime{
+		Name: series.Title, URL: series.URL, Source: series.Source,
+		MediaType: models.MediaType(series.MediaType), AnilistID: series.AnilistID,
 	}
 }

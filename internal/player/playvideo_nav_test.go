@@ -70,7 +70,7 @@ func TestFindSelectedEpisodeIndex(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, tt.want, findSelectedEpisodeIndex(tt.episodes, tt.url, tt.numStr))
+			assert.Equal(t, tt.want, FindSelectedEpisodeIndex(tt.episodes, tt.url, tt.numStr))
 		})
 	}
 }

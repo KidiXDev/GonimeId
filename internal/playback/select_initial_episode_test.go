@@ -184,6 +184,20 @@ func TestSelectInitialEpisode_Success(t *testing.T) {
 	assert.Equal(t, int32(1), callCount.Load(), "selector must be called exactly once")
 }
 
+func TestSelectMovieEpisodeKeepsMoviePlaybackSelection(t *testing.T) {
+	episodes := sampleEpisodes(2)
+	episodes[1].URL = episodes[0].URL
+	withSelector(t,
+		func([]models.Episode) (string, string, error) { return episodes[1].URL, episodes[1].Number, nil },
+		func(string) string { return "2" },
+	)
+
+	selected, err := selectMovieEpisode(episodes)
+	require.NoError(t, err)
+	require.Len(t, selected, 1)
+	assert.Equal(t, episodes[1], selected[0])
+}
+
 func TestSelectInitialEpisode_BackRequested(t *testing.T) {
 	withSelector(t,
 		func([]models.Episode) (string, string, error) {

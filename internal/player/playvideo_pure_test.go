@@ -528,6 +528,25 @@ func TestHandleUserInput_AliveSocketReturnsBackOnMenuError(t *testing.T) {
 	assert.ErrorIs(t, err, ErrBackToDownloadOptions)
 }
 
+func TestHandlePlaybackEndStopsWithoutReopeningEpisodeMenu(t *testing.T) {
+	episodes := []models.Episode{{Number: "1"}, {Number: "2"}}
+	stop := make(chan struct{})
+	countdownCalled := false
+	countdown := func(string, int) (bool, error) {
+		countdownCalled = true
+		return false, nil
+	}
+
+	assert.ErrorIs(t, handlePlaybackEnd("stop", episodes, 0, 1, 0, 0, nil, stop, "", nil, true, countdown), ErrPlaybackFinished)
+	assert.False(t, countdownCalled, "non-EOF must not autoplay")
+	assert.ErrorIs(t, handlePlaybackEnd("eof", episodes[:1], 0, 1, 0, 0, nil, stop, "", nil, true, countdown), ErrPlaybackFinished)
+	assert.False(t, countdownCalled, "last episode must not show a countdown")
+	assert.ErrorIs(t, handlePlaybackEnd("eof", episodes, 0, 1, 0, 0, nil, stop, "", nil, false, countdown), ErrPlaybackFinished)
+	assert.False(t, countdownCalled, "disabled autoplay must not show a countdown")
+	assert.ErrorIs(t, handlePlaybackEnd("eof", episodes, 0, 1, 0, 0, nil, stop, "", nil, true, countdown), ErrPlaybackFinished)
+	assert.True(t, countdownCalled, "enabled autoplay must offer the countdown")
+}
+
 // The following functions all depend on an interactive TUI (fuzzyfinder)
 // and/or a fully-orchestrated playback session. Per CLAUDE.md, the
 // internal logic is exercised by sibling tests; here we pin the

@@ -575,8 +575,12 @@ func FlagParser() (string, error) {
 		}
 		return TreatingAnimeName(animeName), nil
 	}
-	animeName, err := getUserInput("Search anime")
-	return TreatingAnimeName(animeName), err
+	// No title means interactive watch-hub mode. Search remains available from
+	// the hub, while explicit title arguments keep the direct-search fast path.
+	if !term.IsTerminal(os.Stdin.Fd()) {
+		return "", errors.New("no anime name entered (no interactive terminal available?)")
+	}
+	return "", nil
 }
 
 // getUserInput asks for the anime name on a full shell screen (alt screen, so

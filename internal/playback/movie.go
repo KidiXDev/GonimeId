@@ -3,6 +3,7 @@ package playback
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -17,8 +18,36 @@ import (
 	"github.com/KidiXDev/GonimeId/internal/util"
 )
 
+// HandleMovieWithEpisodeSelection opens the shared episode picker before
+// preserving the movie-specific playback and post-playback controls.
+func HandleMovieWithEpisodeSelection(ctx context.Context, anime *models.Anime, episodes []models.Episode, discordEnabled bool) error {
+	player.SetTrackingMedia(anime)
+	player.SetTrackingEpisodeCount(len(episodes))
+	selected, err := selectMovieEpisode(episodes)
+	if errors.Is(err, player.ErrBackRequested) {
+		return player.ErrBackToAnimeSelection
+	}
+	if err != nil {
+		return err
+	}
+	return HandleMovie(ctx, anime, selected, discordEnabled)
+}
+
+func selectMovieEpisode(episodes []models.Episode) ([]models.Episode, error) {
+	url, number, _, err := SelectInitialEpisode(episodes)
+	if err != nil {
+		return nil, err
+	}
+	if index := player.FindSelectedEpisodeIndex(episodes, url, number); index >= 0 {
+		return []models.Episode{episodes[index]}, nil
+	}
+	return nil, fmt.Errorf("selected episode %q is unavailable", number)
+}
+
 // HandleMovie gerencia a reprodução de filmes/OVAs
 func HandleMovie(ctx context.Context, anime *models.Anime, episodes []models.Episode, discordEnabled bool) error {
+	player.SetTrackingMedia(anime)
+	player.SetTrackingEpisodeCount(len(episodes))
 	// Prepare the mpv path while metadata/stream work is in progress.
 	player.PreWarmMPVPath()
 

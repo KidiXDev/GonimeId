@@ -442,6 +442,21 @@ func TestSearchAnimeWithRetry_RetriesUntilSuccess(t *testing.T) {
 	assert.Equal(t, int32(3), attempts.Load())
 }
 
+func TestSearchAnimeWithRetry_PromptsBeforeEmptySearch(t *testing.T) {
+	want := &models.Anime{Name: "Frieren"}
+	withOverrides(t, appflowOverrides{
+		searchRetry: func(name, _ string) (*models.Anime, []*models.Anime, error) {
+			assert.Equal(t, "Frieren", name)
+			return want, []*models.Anime{want}, nil
+		},
+		promptForName: func(string) (string, error) { return "  Frieren  ", nil },
+	})
+
+	got, err := SearchAnimeWithRetry("")
+	require.NoError(t, err)
+	assert.Equal(t, want, got)
+}
+
 func TestSearchAnimeWithRetry_BackToSearchBranch(t *testing.T) {
 	want := &models.Anime{Name: "FoundIt"}
 	var attempts atomic.Int32
